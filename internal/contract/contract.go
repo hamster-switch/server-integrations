@@ -15,6 +15,7 @@ var (
 	componentPattern = regexp.MustCompile(`^(sub2api|new-api)$`)
 	sha256Pattern    = regexp.MustCompile(`^[a-f0-9]{64}$`)
 	servicePattern   = regexp.MustCompile(`^[A-Za-z0-9_.@-]+$`)
+	versionPattern   = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
 )
 
 type Manifest struct {
@@ -108,7 +109,7 @@ func (m Manifest) Validate() error {
 	if !componentPattern.MatchString(m.Component) {
 		return fmt.Errorf("unsupported component %q", m.Component)
 	}
-	if strings.TrimSpace(m.ReleaseID) == "" || strings.TrimSpace(m.PatchVersion) == "" || strings.TrimSpace(m.MinCLI) == "" {
+	if strings.TrimSpace(m.ReleaseID) == "" || !versionPattern.MatchString(m.PatchVersion) || !versionPattern.MatchString(m.MinCLI) {
 		return errors.New("release_id, patch_version and min_cli_version are required")
 	}
 	if m.PublishedAt.IsZero() || strings.TrimSpace(m.Upstream.Repository) == "" || strings.TrimSpace(m.Upstream.Ref) == "" {

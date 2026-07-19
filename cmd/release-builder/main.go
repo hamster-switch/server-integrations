@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/hamster-switch/server-integrations/internal/contract"
+	"github.com/hamster-switch/server-integrations/internal/release"
 )
 
 func main() {
@@ -62,12 +63,15 @@ func run() error {
 		return errors.New("signing secret must be a base64 Ed25519 seed")
 	}
 	signature := ed25519.Sign(ed25519.NewKeyFromSeed(seed), canonical)
+	encoded := append([]byte(base64.StdEncoding.EncodeToString(signature)), '\n')
+	if _, err := release.VerifyManifest(canonical, encoded); err != nil {
+		return fmt.Errorf("signing key does not match the embedded release trust root: %w", err)
+	}
 	if err := os.MkdirAll(*output, 0o755); err != nil {
 		return err
 	}
 	if err := os.WriteFile(filepath.Join(*output, "manifest.json"), canonical, 0o644); err != nil {
 		return err
 	}
-	encoded := append([]byte(base64.StdEncoding.EncodeToString(signature)), '\n')
 	return os.WriteFile(filepath.Join(*output, "manifest.json.sig"), encoded, 0o644)
 }
