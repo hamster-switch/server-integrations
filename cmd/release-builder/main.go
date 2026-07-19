@@ -15,6 +15,7 @@ import (
 
 	"github.com/hamster-switch/server-integrations/internal/contract"
 	"github.com/hamster-switch/server-integrations/internal/release"
+	"github.com/hamster-switch/server-integrations/internal/updater"
 )
 
 func main() {
@@ -48,6 +49,13 @@ func run() error {
 		}
 		digest := sha256.Sum256(assetBody)
 		manifest.Assets[index].SHA256 = hex.EncodeToString(digest[:])
+	}
+	bundle, err := os.ReadFile(filepath.Join(*assetsDir, filepath.Base(manifest.Patch.BundleAsset)))
+	if err != nil {
+		return err
+	}
+	if err := updater.VerifyBundle(manifest, bundle); err != nil {
+		return fmt.Errorf("verify patch bundle: %w", err)
 	}
 	if err := manifest.Validate(); err != nil {
 		return err

@@ -30,5 +30,7 @@ The embedded public key is documented in
 is stored only as the repository Actions secret
 `HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY`.
 
-No patch release exists until the sub2api or new-api integration task contributes
-an exact upstream fingerprint and deterministic replacement bundle.
+Prepared patch releases live under `releases/<component>/<version>` and include
+an exact upstream fingerprint plus deterministic replacement bundle. They are
+not installable until the reviewed commit is tagged and the signing workflow
+publishes the corresponding formal Release.

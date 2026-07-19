@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/hamster-switch/server-integrations/internal/updater"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 type options struct {
 	target   string
@@ -71,6 +72,9 @@ func run(args []string) error {
 		return fmt.Errorf("未知参数: %s", strings.Join(flags.Args(), " "))
 	}
 	if command == "rollback" {
+		if runtime.GOOS != "linux" {
+			return errors.New("rollback is supported only on Linux production servers")
+		}
 		return rollback(component, opts)
 	}
 	if opts.target == "" {
@@ -107,6 +111,9 @@ func run(args []string) error {
 	if command == "check" {
 		fmt.Println("检查完成：未下载补丁包，未修改源码，未构建或重启。")
 		return nil
+	}
+	if runtime.GOOS != "linux" {
+		return errors.New("patch application is supported only on Linux production servers")
 	}
 	return update(ctx, client, verified, root, opts)
 }
