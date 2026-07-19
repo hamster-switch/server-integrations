@@ -59,6 +59,22 @@ func TestManifestRejectsArbitraryBuildStep(t *testing.T) {
 	}
 }
 
+func TestManifestAcceptsNewAPIStructuredBuildSteps(t *testing.T) {
+	manifest := validManifest()
+	manifest.Component = "new-api"
+	manifest.ReleaseID = "new-api-v1.0.0"
+	manifest.Upstream.Repository = "https://github.com/QuantumNous/new-api"
+	manifest.Deployment.BuildSteps = []BuildStep{
+		{Kind: "bun-install", Workdir: "web"},
+		{Kind: "bun-build", Workdir: "web/default"},
+		{Kind: "bun-build", Workdir: "web/classic"},
+		{Kind: "go-build-root"},
+	}
+	if err := manifest.Validate(); err != nil {
+		t.Fatalf("valid new-api build steps rejected: %v", err)
+	}
+}
+
 func TestManifestAcceptsExplicitCreateAndRejectsCreateHash(t *testing.T) {
 	manifest := validManifest()
 	manifest.Upstream.Files = append(manifest.Upstream.Files, FileFingerprint{Path: "backend/new.go", Absent: true})

@@ -189,7 +189,7 @@ func (d Deployment) validate() error {
 	}
 	for _, step := range d.BuildSteps {
 		switch step.Kind {
-		case "go-build", "go-build-server", "npm-ci", "npm-build", "pnpm-install", "pnpm-build":
+		case "go-build", "go-build-server", "go-build-root", "npm-ci", "npm-build", "pnpm-install", "pnpm-build", "bun-install", "bun-build":
 		default:
 			return fmt.Errorf("unsupported build step %q", step.Kind)
 		}

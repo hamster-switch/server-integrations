@@ -1,6 +1,10 @@
 name: release-signed-patch
 
 on:
+  push:
+    tags:
+      - 'sub2api-v*.*.*'
+      - 'new-api-v*.*.*'
   workflow_dispatch:
     inputs:
       component:
@@ -18,20 +22,39 @@ permissions:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main' && github.repository == 'hamster-switch/server-integrations'
+    if: github.repository == 'hamster-switch/server-integrations' && (github.event_name == 'push' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
       - run: go test ./...
+      - name: Resolve immutable component release
+        env:
+          DISPATCH_COMPONENT: ${{ inputs.component }}
+          DISPATCH_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            case "$GITHUB_REF_NAME" in
+              sub2api-v*) COMPONENT="sub2api"; VERSION="${GITHUB_REF_NAME#sub2api-v}" ;;
+              new-api-v*) COMPONENT="new-api"; VERSION="${GITHUB_REF_NAME#new-api-v}" ;;
+              *) echo "unsupported release tag: $GITHUB_REF_NAME" >&2; exit 1 ;;
+            esac
+          else
+            COMPONENT="$DISPATCH_COMPONENT"
+            VERSION="$DISPATCH_VERSION"
+          fi
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+          test "$GITHUB_REF_NAME" = "${COMPONENT}-v${VERSION}" || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]
+          echo "COMPONENT=$COMPONENT" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Build and sign exact release manifest
         env:
           HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY: ${{ secrets.HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY }}
-          COMPONENT: ${{ inputs.component }}
-          VERSION: ${{ inputs.version }}
         run: |
           test -n "$HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY"
           printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
@@ -46,8 +69,6 @@ jobs:
       - name: Publish immutable formal Release
         env:
           GH_TOKEN: ${{ github.token }}
-          COMPONENT: ${{ inputs.component }}
-          VERSION: ${{ inputs.version }}
         run: |
           TAG="${COMPONENT}-v${VERSION}"
           git rev-parse "$TAG" >/dev/null 2>&1 || {
