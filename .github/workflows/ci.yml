@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./cmd/hamster-integrations
+      - run: GOOS=linux GOARCH=amd64 go build -trimpath -o dist/hamster-integrations-linux-amd64 ./cmd/hamster-integrations
