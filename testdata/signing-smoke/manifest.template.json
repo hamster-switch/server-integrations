@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "release_id": "sub2api-v0.0.0",
+  "component": "sub2api",
+  "patch_version": "0.0.0",
+  "min_cli_version": "0.1.0",
+  "published_at": "2026-07-19T00:00:00Z",
+  "upstream": {
+    "repository": "https://github.com/Wei-Shaw/sub2api",
+    "ref": "signing-smoke",
+    "commit": "0000000000000000000000000000000000000000",
+    "files": [
+      {
+        "path": "backend/smoke.go",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "anchors": [
+      {
+        "path": "backend/smoke.go",
+        "contains": "package smoke"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "name": "smoke-patch.tar.gz",
+      "sha256": "filled-by-builder",
+      "media_type": "application/gzip"
+    }
+  ],
+  "patch": {
+    "bundle_asset": "smoke-patch.tar.gz",
+    "files": [
+      {
+        "path": "backend/smoke.go",
+        "bundle_path": "payload/backend/smoke.go",
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "result_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  "deployment": {
+    "allowed_modes": ["manual"],
+    "manual_steps": ["signing smoke only"]
+  },
+  "impact_notes": [
+    {
+      "kind": "test",
+      "message": "This manifest is never published."
+    }
+  ]
+}

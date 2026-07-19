@@ -34,6 +34,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           test -n "$HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY"
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
           test -f "releases/${COMPONENT}/${VERSION}/manifest.template.json"
           test -d "releases/${COMPONENT}/${VERSION}/assets"
           mkdir -p dist/release
