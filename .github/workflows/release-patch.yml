@@ -1,0 +1,60 @@
+name: release-signed-patch
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Component
+        required: true
+        type: choice
+        options: [sub2api, new-api]
+      version:
+        description: Patch version without v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && github.repository == 'hamster-switch/server-integrations'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./...
+      - name: Build and sign exact release manifest
+        env:
+          HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY: ${{ secrets.HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY }}
+          COMPONENT: ${{ inputs.component }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          test -n "$HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY"
+          test -f "releases/${COMPONENT}/${VERSION}/manifest.template.json"
+          test -d "releases/${COMPONENT}/${VERSION}/assets"
+          mkdir -p dist/release
+          go run ./cmd/release-builder \
+            --manifest "releases/${COMPONENT}/${VERSION}/manifest.template.json" \
+            --assets "releases/${COMPONENT}/${VERSION}/assets" \
+            --output dist/release
+          cp "releases/${COMPONENT}/${VERSION}/assets/"* dist/release/
+      - name: Publish immutable formal Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMPONENT: ${{ inputs.component }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="${COMPONENT}-v${VERSION}"
+          git rev-parse "$TAG" >/dev/null 2>&1 || {
+            echo "An annotated, pushed tag $TAG is required" >&2
+            exit 1
+          }
+          gh release create "$TAG" dist/release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag
