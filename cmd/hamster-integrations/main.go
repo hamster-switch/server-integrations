@@ -17,7 +17,7 @@ import (
 	"github.com/hamster-switch/server-integrations/internal/updater"
 )
 
-const version = "0.2.0"
+const version = "0.3.0"
 
 type options struct {
 	target   string
