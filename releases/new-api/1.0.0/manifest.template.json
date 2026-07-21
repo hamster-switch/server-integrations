@@ -1,0 +1,357 @@
+{
+  "schema_version": 1,
+  "release_id": "new-api-v1.0.0",
+  "component": "new-api",
+  "patch_version": "1.0.0",
+  "min_cli_version": "0.2.0",
+  "published_at": "2026-07-19T14:00:00Z",
+  "upstream": {
+    "repository": "https://github.com/QuantumNous/new-api",
+    "ref": "5a6c53d4966b2e34690ab49f3dd19be01c88fdbe",
+    "commit": "5a6c53d4966b2e34690ab49f3dd19be01c88fdbe",
+    "files": [
+      {
+        "path": "model/main.go",
+        "sha256": "672da4681a25df064944acfe5e5231ab670bf6fff344841ec41be57d7f4933e1"
+      },
+      {
+        "path": "router/api-router.go",
+        "sha256": "274ee2f8cd295fd665df8d6812608b568c22ffdf4ca9ce452b1ad23e923a1f6b"
+      },
+      {
+        "path": "web/classic/src/App.jsx",
+        "sha256": "d2481a30cbd947001dd371f1dd42b0313fba2d5ebf97fcd8b5b71f5458f7badf"
+      },
+      {
+        "path": "web/classic/src/components/layout/SiderBar.jsx",
+        "sha256": "e7625612ca46bc76d2bd192a9e0cbcaf2acb1c35d3f4370d9421b828a82e763d"
+      },
+      {
+        "path": "web/classic/src/helpers/render.jsx",
+        "sha256": "7db5849a7c1d0d01215a9dd038a07008d9ef8ae7ffcc4a57049af54c95d37f89"
+      },
+      {
+        "path": "web/classic/src/hooks/common/useSidebar.js",
+        "sha256": "562d598437f2f538407e5a076c18044716ff30e8ce7627a289c6ad1e251ce23f"
+      },
+      {
+        "path": "web/default/src/hooks/use-sidebar-data.ts",
+        "sha256": "eb467459730e19555ab29814a3fc2f876fb3b23e2a6a711cf3207bd288da3a74"
+      },
+      {
+        "path": "web/default/src/routeTree.gen.ts",
+        "sha256": "1d79fe6a70d6918a6842229f111eb782719ac4576f6a7a1a2685d287d5c7889f"
+      },
+      {
+        "path": "controller/hamster_config_subscription.go",
+        "absent": true
+      },
+      {
+        "path": "controller/hamster_config_subscription_test.go",
+        "absent": true
+      },
+      {
+        "path": "controller/hamster_tutorial.go",
+        "absent": true
+      },
+      {
+        "path": "controller/hamster_yaml_template.go",
+        "absent": true
+      },
+      {
+        "path": "model/hamster_config_subscription.go",
+        "absent": true
+      },
+      {
+        "path": "model/hamster_config_subscription_test.go",
+        "absent": true
+      },
+      {
+        "path": "service/hamsterswitch/image_cache.go",
+        "absent": true
+      },
+      {
+        "path": "service/hamsterswitch/subscription.go",
+        "absent": true
+      },
+      {
+        "path": "service/hamsterswitch/template.go",
+        "absent": true
+      },
+      {
+        "path": "service/hamsterswitch/template_test.go",
+        "absent": true
+      },
+      {
+        "path": "service/hamsterswitch/tutorial.go",
+        "absent": true
+      },
+      {
+        "path": "service/hamsterswitch/tutorial_release.go",
+        "absent": true
+      },
+      {
+        "path": "web/classic/src/pages/ConfigSubscription/index.jsx",
+        "absent": true
+      },
+      {
+        "path": "web/default/src/features/config-subscriptions/api.ts",
+        "absent": true
+      },
+      {
+        "path": "web/default/src/features/config-subscriptions/index.tsx",
+        "absent": true
+      },
+      {
+        "path": "web/default/src/routes/_authenticated/config-subscriptions/index.tsx",
+        "absent": true
+      }
+    ],
+    "anchors": [
+      {
+        "path": "model/main.go",
+        "contains": "err := DB.AutoMigrate("
+      },
+      {
+        "path": "router/api-router.go",
+        "contains": "tokenRoute := apiRouter.Group(\"/token\")"
+      },
+      {
+        "path": "web/classic/src/App.jsx",
+        "contains": "path='/console/token'"
+      },
+      {
+        "path": "web/classic/src/components/layout/SiderBar.jsx",
+        "contains": "token: '/console/token'"
+      },
+      {
+        "path": "web/classic/src/helpers/render.jsx",
+        "contains": "case 'token':"
+      },
+      {
+        "path": "web/classic/src/hooks/common/useSidebar.js",
+        "contains": "token: true"
+      },
+      {
+        "path": "web/default/src/hooks/use-sidebar-data.ts",
+        "contains": "url: '/keys'"
+      },
+      {
+        "path": "web/default/src/routeTree.gen.ts",
+        "contains": "AuthenticatedKeysIndexRouteImport"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "name": "new-api-patch-1.0.0.tar.gz",
+      "sha256": "a2a4f1a6e805e9643a823b7103b756d16b05661d259d13f54d782c0b6e9a8360",
+      "media_type": "application/gzip"
+    }
+  ],
+  "patch": {
+    "bundle_asset": "new-api-patch-1.0.0.tar.gz",
+    "files": [
+      {
+        "path": "model/main.go",
+        "bundle_path": "payload/model/main.go",
+        "source_sha256": "672da4681a25df064944acfe5e5231ab670bf6fff344841ec41be57d7f4933e1",
+        "result_sha256": "3a3acf250ea7441fa1d9e1539840461aacb0afac8f5365f79117eac947649fe6"
+      },
+      {
+        "path": "router/api-router.go",
+        "bundle_path": "payload/router/api-router.go",
+        "source_sha256": "274ee2f8cd295fd665df8d6812608b568c22ffdf4ca9ce452b1ad23e923a1f6b",
+        "result_sha256": "aab3ed7e8aca8db114e2ef2e5e85f21ba0dae08e888ea69598b25817d3ba82ef"
+      },
+      {
+        "path": "web/classic/src/App.jsx",
+        "bundle_path": "payload/web/classic/src/App.jsx",
+        "source_sha256": "d2481a30cbd947001dd371f1dd42b0313fba2d5ebf97fcd8b5b71f5458f7badf",
+        "result_sha256": "f38eb3e69c344c833a3a3adaa4e2f764d1f2e0b9e7437dc37c35fd4db6767ea9"
+      },
+      {
+        "path": "web/classic/src/components/layout/SiderBar.jsx",
+        "bundle_path": "payload/web/classic/src/components/layout/SiderBar.jsx",
+        "source_sha256": "e7625612ca46bc76d2bd192a9e0cbcaf2acb1c35d3f4370d9421b828a82e763d",
+        "result_sha256": "d9223699c5e1c650686c6dc049241b7f84c0b3f672fdb16d80950876e4b52d60"
+      },
+      {
+        "path": "web/classic/src/helpers/render.jsx",
+        "bundle_path": "payload/web/classic/src/helpers/render.jsx",
+        "source_sha256": "7db5849a7c1d0d01215a9dd038a07008d9ef8ae7ffcc4a57049af54c95d37f89",
+        "result_sha256": "3e68f9ce3c100a84cc18d2093ceebffa2c2d0412eea3c9fab51f42e33466bf19"
+      },
+      {
+        "path": "web/classic/src/hooks/common/useSidebar.js",
+        "bundle_path": "payload/web/classic/src/hooks/common/useSidebar.js",
+        "source_sha256": "562d598437f2f538407e5a076c18044716ff30e8ce7627a289c6ad1e251ce23f",
+        "result_sha256": "b6dd75cca0f425d55f4da57855812e53ebfaaf210af4f6bca32651e0873af522"
+      },
+      {
+        "path": "web/default/src/hooks/use-sidebar-data.ts",
+        "bundle_path": "payload/web/default/src/hooks/use-sidebar-data.ts",
+        "source_sha256": "eb467459730e19555ab29814a3fc2f876fb3b23e2a6a711cf3207bd288da3a74",
+        "result_sha256": "31116078d732c96bb4eff6dc8a662d6dc93f31aa8961b015c9526e83c4bc3ee5"
+      },
+      {
+        "path": "web/default/src/routeTree.gen.ts",
+        "bundle_path": "payload/web/default/src/routeTree.gen.ts",
+        "source_sha256": "1d79fe6a70d6918a6842229f111eb782719ac4576f6a7a1a2685d287d5c7889f",
+        "result_sha256": "0d671a16e306c44bf163a47caf787854de9380dedc9dec6315a3df34eb9d3bf6"
+      },
+      {
+        "path": "controller/hamster_config_subscription.go",
+        "bundle_path": "payload/controller/hamster_config_subscription.go",
+        "result_sha256": "94fee4da89d119269ad2ee3451e97e20c372e6a2413552c72f0e78db9de8edfd",
+        "create": true
+      },
+      {
+        "path": "controller/hamster_config_subscription_test.go",
+        "bundle_path": "payload/controller/hamster_config_subscription_test.go",
+        "result_sha256": "b18c61a85de08113d77cff27b9aaf6bb549bad19cbfda98eb34bb86ddb9e5436",
+        "create": true
+      },
+      {
+        "path": "controller/hamster_tutorial.go",
+        "bundle_path": "payload/controller/hamster_tutorial.go",
+        "result_sha256": "ef2b805b99bf509d8ecf5c0fb45fd284e1a13b7606a0aeb217eb1d87b87f024b",
+        "create": true
+      },
+      {
+        "path": "controller/hamster_yaml_template.go",
+        "bundle_path": "payload/controller/hamster_yaml_template.go",
+        "result_sha256": "7aea4eb221f7ec4d1841cceafd72191b6f38086ff53566cb1c65512b4ea1929d",
+        "create": true
+      },
+      {
+        "path": "model/hamster_config_subscription.go",
+        "bundle_path": "payload/model/hamster_config_subscription.go",
+        "result_sha256": "1c81a4fe14a89e4ed996b74ea4e6b156fe116adfb8e64a0235aab3a67f1fe6a9",
+        "create": true
+      },
+      {
+        "path": "model/hamster_config_subscription_test.go",
+        "bundle_path": "payload/model/hamster_config_subscription_test.go",
+        "result_sha256": "a2991cc000a94c962f6052f4b81146bc8e4979f769d36b35496a152935bdfd6b",
+        "create": true
+      },
+      {
+        "path": "service/hamsterswitch/image_cache.go",
+        "bundle_path": "payload/service/hamsterswitch/image_cache.go",
+        "result_sha256": "048959b4980a70b141a63247b5273cbe6d2d60e4487d1a0b2c58874d62e16637",
+        "create": true
+      },
+      {
+        "path": "service/hamsterswitch/subscription.go",
+        "bundle_path": "payload/service/hamsterswitch/subscription.go",
+        "result_sha256": "6b3964517b023d5ad8c006ed7c13c4855d54e02ff6a459953362d41f2c355e1f",
+        "create": true
+      },
+      {
+        "path": "service/hamsterswitch/template.go",
+        "bundle_path": "payload/service/hamsterswitch/template.go",
+        "result_sha256": "2f60bcace6cb42886093c5a8018b4ee252b5f495c9e01269591eff3f9b039db4",
+        "create": true
+      },
+      {
+        "path": "service/hamsterswitch/template_test.go",
+        "bundle_path": "payload/service/hamsterswitch/template_test.go",
+        "result_sha256": "4dce9c07ae81501250835326e034209b7bb7ccc9a61b17dd8aaaa3c1c5b5afc2",
+        "create": true
+      },
+      {
+        "path": "service/hamsterswitch/tutorial.go",
+        "bundle_path": "payload/service/hamsterswitch/tutorial.go",
+        "result_sha256": "1605eaa521bea3269fe4bac3a556c8602211d65b8a7d36ab8d72309118c99e82",
+        "create": true
+      },
+      {
+        "path": "service/hamsterswitch/tutorial_release.go",
+        "bundle_path": "payload/service/hamsterswitch/tutorial_release.go",
+        "result_sha256": "61b071463eab1e60571f5db117abfff251c28ee507f82d6a8339625cdad91c8b",
+        "create": true
+      },
+      {
+        "path": "web/classic/src/pages/ConfigSubscription/index.jsx",
+        "bundle_path": "payload/web/classic/src/pages/ConfigSubscription/index.jsx",
+        "result_sha256": "3ea0aa94c0ae3e6c1b470d14395d28221ec5a554ff6f2372eae3873af00c2350",
+        "create": true
+      },
+      {
+        "path": "web/default/src/features/config-subscriptions/api.ts",
+        "bundle_path": "payload/web/default/src/features/config-subscriptions/api.ts",
+        "result_sha256": "eb31eec05e4e7719161976d7b9d8329b6c3dec16dd866be418fc5d5e7dac1655",
+        "create": true
+      },
+      {
+        "path": "web/default/src/features/config-subscriptions/index.tsx",
+        "bundle_path": "payload/web/default/src/features/config-subscriptions/index.tsx",
+        "result_sha256": "63f87ccd324f862374b458eaf1f7abe89b0352213fcd2a8d7b08cb5f85faa6bf",
+        "create": true
+      },
+      {
+        "path": "web/default/src/routes/_authenticated/config-subscriptions/index.tsx",
+        "bundle_path": "payload/web/default/src/routes/_authenticated/config-subscriptions/index.tsx",
+        "result_sha256": "cb0a95757b53cecf2bbd58a585bb95d0fc79a6a223d2f4348842d01453430c42",
+        "create": true
+      }
+    ]
+  },
+  "deployment": {
+    "allowed_modes": [
+      "manual",
+      "systemd"
+    ],
+    "build_steps": [
+      {
+        "kind": "bun-install",
+        "workdir": "web"
+      },
+      {
+        "kind": "bun-build",
+        "workdir": "web/default"
+      },
+      {
+        "kind": "bun-build",
+        "workdir": "web/classic"
+      },
+      {
+        "kind": "go-build-root",
+        "workdir": ""
+      }
+    ],
+    "systemd": {
+      "service": "new-api"
+    },
+    "health": {
+      "url": "http://127.0.0.1:3000/api/status",
+      "timeout_seconds": 30
+    },
+    "manual_steps": [
+      "在 web 目录运行 bun install --frozen-lockfile",
+      "分别在 web/default 与 web/classic 运行 bun run build",
+      "在项目根目录运行 go test ./controller ./model ./router ./service/hamsterswitch",
+      "在项目根目录运行 go build -o new-api .",
+      "按本站部署方式重启 new-api，并检查 /api/status"
+    ]
+  },
+  "impact_notes": [
+    {
+      "kind": "breaking",
+      "message": "旧 hs_ 签名 URL 立即失效；升级不会按名称自动删除开发期 Token。"
+    },
+    {
+      "kind": "database",
+      "message": "新增配置订阅、YAML 模板版本、教程快照、站点覆盖与图片元数据表。"
+    },
+    {
+      "kind": "security",
+      "message": "教程仅从正式签名 Release 更新，外链图片经服务端 SSRF 防护、内容校验与缓存。"
+    },
+    {
+      "kind": "content",
+      "message": "通用教程正文由维护者后续发布；站点定制内容与逐项冲突决议不会被自动覆盖。"
+    }
+  ]
+}

@@ -211,6 +211,12 @@ func buildCommand(kind string) (string, []string) {
 		return "pnpm", []string{"install", "--frozen-lockfile"}
 	case "pnpm-build":
 		return "pnpm", []string{"run", "build"}
+	case "go-build-root":
+		return "go", []string{"build", "-o", "new-api", "."}
+	case "bun-install":
+		return "bun", []string{"install", "--frozen-lockfile"}
+	case "bun-build":
+		return "bun", []string{"run", "build"}
 	default:
 		panic("build step was not validated")
 	}
