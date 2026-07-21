@@ -34,3 +34,21 @@ func TestInspectRequiresHashAndAnchor(t *testing.T) {
 		t.Fatalf("expected anchor mismatch: %#v", report)
 	}
 }
+
+func TestInspectAcceptsDeclaredAbsentCreateTarget(t *testing.T) {
+	root := t.TempDir()
+	manifest := contract.Manifest{Component: "sub2api", Upstream: contract.Upstream{Files: []contract.FileFingerprint{{Path: "backend/new.go", Absent: true}}}}
+	report := Inspect(root, manifest)
+	if !report.Compatible || !report.Files[0].Matches {
+		t.Fatalf("expected absent path to match: %#v", report)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "backend"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "backend", "new.go"), []byte("occupied"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if Inspect(root, manifest).Compatible {
+		t.Fatal("expected existing create target to be rejected")
+	}
+}

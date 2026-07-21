@@ -17,6 +17,9 @@ Each declared asset has a lowercase SHA-256 digest. A patch bundle is a gzip
 tar archive containing regular files only. Its entry names and replacement
 hashes are declared in the signed manifest; undeclared entries, links, oversized
 entries, missing files, source hash drift and output hash drift are hard errors.
+New files must be declared twice: the upstream fingerprint uses `absent: true`
+and the patch entry uses `create: true`. Application fails if such a path
+already exists, and rollback removes only those exact signed paths.
 
 ## Compatibility and non-bypassable failures
 

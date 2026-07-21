@@ -58,3 +58,16 @@ func TestManifestRejectsArbitraryBuildStep(t *testing.T) {
 		t.Fatalf("expected arbitrary build rejection, got %v", err)
 	}
 }
+
+func TestManifestAcceptsExplicitCreateAndRejectsCreateHash(t *testing.T) {
+	manifest := validManifest()
+	manifest.Upstream.Files = append(manifest.Upstream.Files, FileFingerprint{Path: "backend/new.go", Absent: true})
+	manifest.Patch.Files = append(manifest.Patch.Files, PatchFile{Path: "backend/new.go", BundlePath: "payload/backend/new.go", Create: true, ResultSHA256: testHash})
+	if err := manifest.Validate(); err != nil {
+		t.Fatalf("valid create rejected: %v", err)
+	}
+	manifest.Patch.Files[1].SourceSHA256 = testHash
+	if err := manifest.Validate(); err == nil {
+		t.Fatal("expected create source hash to be rejected")
+	}
+}

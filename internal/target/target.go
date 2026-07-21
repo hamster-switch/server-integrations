@@ -3,6 +3,7 @@ package target
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,11 +13,12 @@ import (
 )
 
 type FileResult struct {
-	Path     string `json:"path"`
-	Expected string `json:"expected_sha256"`
-	Actual   string `json:"actual_sha256,omitempty"`
-	Matches  bool   `json:"matches"`
-	Error    string `json:"error,omitempty"`
+	Path           string `json:"path"`
+	Expected       string `json:"expected_sha256"`
+	Actual         string `json:"actual_sha256,omitempty"`
+	Matches        bool   `json:"matches"`
+	Error          string `json:"error,omitempty"`
+	ExpectedAbsent bool   `json:"expected_absent,omitempty"`
 }
 
 type Report struct {
@@ -48,7 +50,20 @@ func Inspect(root string, manifest contract.Manifest) Report {
 	for _, expected := range manifest.Upstream.Files {
 		path := filepath.Join(root, filepath.FromSlash(expected.Path))
 		body, err := os.ReadFile(path)
-		result := FileResult{Path: expected.Path, Expected: expected.SHA256}
+		result := FileResult{Path: expected.Path, Expected: expected.SHA256, ExpectedAbsent: expected.Absent}
+		if expected.Absent {
+			if errors.Is(err, os.ErrNotExist) {
+				result.Matches = true
+			} else if err != nil {
+				result.Error = err.Error()
+				report.Compatible = false
+			} else {
+				result.Error = "path must not exist"
+				report.Compatible = false
+			}
+			report.Files = append(report.Files, result)
+			continue
+		}
 		if err != nil {
 			result.Error = err.Error()
 			report.Compatible = false

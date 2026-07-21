@@ -42,7 +42,8 @@ type Upstream struct {
 
 type FileFingerprint struct {
 	Path   string `json:"path"`
-	SHA256 string `json:"sha256"`
+	SHA256 string `json:"sha256,omitempty"`
+	Absent bool   `json:"absent,omitempty"`
 }
 
 type Anchor struct {
@@ -64,8 +65,9 @@ type Patch struct {
 type PatchFile struct {
 	Path         string `json:"path"`
 	BundlePath   string `json:"bundle_path"`
-	SourceSHA256 string `json:"source_sha256"`
+	SourceSHA256 string `json:"source_sha256,omitempty"`
 	ResultSHA256 string `json:"result_sha256"`
+	Create       bool   `json:"create,omitempty"`
 }
 
 type Deployment struct {
@@ -138,18 +140,21 @@ func (m Manifest) Validate() error {
 	if _, ok := assets[m.Patch.BundleAsset]; !ok {
 		return fmt.Errorf("patch bundle asset %q is not declared", m.Patch.BundleAsset)
 	}
-	seen := map[string]struct{}{}
+	seen := map[string]FileFingerprint{}
 	for _, file := range m.Upstream.Files {
-		if err := validateRelativePath(file.Path); err != nil || !sha256Pattern.MatchString(file.SHA256) {
+		if err := validateRelativePath(file.Path); err != nil || (file.Absent && file.SHA256 != "") || (!file.Absent && !sha256Pattern.MatchString(file.SHA256)) {
 			return fmt.Errorf("invalid upstream file %q", file.Path)
 		}
-		seen[file.Path] = struct{}{}
+		if _, exists := seen[file.Path]; exists {
+			return fmt.Errorf("duplicate upstream file %q", file.Path)
+		}
+		seen[file.Path] = file
 	}
 	for _, anchor := range m.Upstream.Anchors {
 		if err := validateRelativePath(anchor.Path); err != nil || anchor.Contains == "" {
 			return fmt.Errorf("invalid anchor for %q", anchor.Path)
 		}
-		if _, ok := seen[anchor.Path]; !ok {
+		if file, ok := seen[anchor.Path]; !ok || file.Absent {
 			return fmt.Errorf("anchor path %q has no upstream fingerprint", anchor.Path)
 		}
 	}
@@ -160,11 +165,9 @@ func (m Manifest) Validate() error {
 		if err := validateRelativePath(file.BundlePath); err != nil {
 			return err
 		}
-		if !sha256Pattern.MatchString(file.SourceSHA256) || !sha256Pattern.MatchString(file.ResultSHA256) {
+		upstream, ok := seen[file.Path]
+		if !ok || !sha256Pattern.MatchString(file.ResultSHA256) || (file.Create && (file.SourceSHA256 != "" || !upstream.Absent)) || (!file.Create && (!sha256Pattern.MatchString(file.SourceSHA256) || upstream.Absent || file.SourceSHA256 != upstream.SHA256)) {
 			return fmt.Errorf("invalid patch hashes for %q", file.Path)
-		}
-		if _, ok := seen[file.Path]; !ok {
-			return fmt.Errorf("patch path %q has no upstream fingerprint", file.Path)
 		}
 	}
 	return m.Deployment.validate()
@@ -186,7 +189,7 @@ func (d Deployment) validate() error {
 	}
 	for _, step := range d.BuildSteps {
 		switch step.Kind {
-		case "go-build", "npm-ci", "npm-build", "pnpm-install", "pnpm-build":
+		case "go-build", "go-build-server", "npm-ci", "npm-build", "pnpm-install", "pnpm-build":
 		default:
 			return fmt.Errorf("unsupported build step %q", step.Kind)
 		}

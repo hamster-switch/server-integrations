@@ -33,6 +33,7 @@ type State struct {
 	Deployment    contract.Deployment `json:"deployment"`
 	AppliedAt     time.Time           `json:"applied_at"`
 	LastResult    string              `json:"last_result"`
+	CreatedFiles  []string            `json:"created_files,omitempty"`
 }
 
 func StatePath(stateRoot, component string) string {
@@ -69,6 +70,15 @@ func Apply(ctx context.Context, targetRoot, stateRoot, mode string, manifest con
 	}
 	for _, patch := range manifest.Patch.Files {
 		source := filepath.Join(targetRoot, filepath.FromSlash(patch.Path))
+		if patch.Create {
+			if _, err := os.Lstat(source); !errors.Is(err, os.ErrNotExist) {
+				if err == nil {
+					return fmt.Errorf("create target already exists: %s", patch.Path)
+				}
+				return fmt.Errorf("inspect create target %s: %w", patch.Path, err)
+			}
+			continue
+		}
 		body, err := os.ReadFile(source)
 		if err != nil {
 			return fmt.Errorf("read source %s: %w", patch.Path, err)
@@ -90,12 +100,17 @@ func Apply(ctx context.Context, targetRoot, stateRoot, mode string, manifest con
 		BackupDir: backupDir, Mode: mode, Deployment: manifest.Deployment,
 		AppliedAt: time.Now().UTC(), LastResult: "applying",
 	}
+	for _, patch := range manifest.Patch.Files {
+		if patch.Create {
+			state.CreatedFiles = append(state.CreatedFiles, patch.Path)
+		}
+	}
 	if err := writeState(stateRoot, state); err != nil {
 		return err
 	}
 	for _, patch := range manifest.Patch.Files {
 		destination := filepath.Join(targetRoot, filepath.FromSlash(patch.Path))
-		if err := atomicReplace(destination, payloads[patch.BundlePath], patch.ResultSHA256); err != nil {
+		if err := atomicReplace(destination, payloads[patch.BundlePath], patch.ResultSHA256, patch.Create); err != nil {
 			state.LastResult = "source replacement failed"
 			restoreErr := restore(state)
 			_ = writeState(stateRoot, state)
@@ -186,6 +201,8 @@ func buildCommand(kind string) (string, []string) {
 	switch kind {
 	case "go-build":
 		return "go", []string{"build", "./..."}
+	case "go-build-server":
+		return "go", []string{"build", "-o", "../sub2api", "./cmd/server"}
 	case "npm-ci":
 		return "npm", []string{"ci"}
 	case "npm-build":
@@ -275,13 +292,26 @@ func unpack(bundle []byte, files []contract.PatchFile) (map[string][]byte, error
 	return payloads, nil
 }
 
-func atomicReplace(path string, body []byte, expected string) error {
+// VerifyBundle checks the complete signed replacement set without writing to a target.
+func VerifyBundle(manifest contract.Manifest, bundle []byte) error {
+	_, err := unpack(bundle, manifest.Patch.Files)
+	return err
+}
+
+func atomicReplace(path string, body []byte, expected string, create bool) error {
 	info, err := os.Stat(path)
-	if err != nil {
+	mode := os.FileMode(0o644)
+	if err != nil && !(create && errors.Is(err, os.ErrNotExist)) {
+		return err
+	}
+	if err == nil {
+		mode = info.Mode().Perm()
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 	temporary := path + fmt.Sprintf(".hamster-%d.tmp", time.Now().UnixNano())
-	if err := os.WriteFile(temporary, body, info.Mode().Perm()); err != nil {
+	if err := os.WriteFile(temporary, body, mode); err != nil {
 		return err
 	}
 	if digest(body) != expected {
@@ -299,6 +329,12 @@ func atomicReplace(path string, body []byte, expected string) error {
 }
 
 func restore(state State) error {
+	for _, relative := range state.CreatedFiles {
+		destination := filepath.Join(state.Target, filepath.FromSlash(relative))
+		if err := os.Remove(destination); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove created file %s: %w", relative, err)
+		}
+	}
 	return filepath.WalkDir(state.BackupDir, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr

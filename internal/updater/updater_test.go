@@ -63,6 +63,30 @@ func TestApplyRejectsDriftBeforeModification(t *testing.T) {
 	assertFile(t, path, []byte("locally changed"))
 }
 
+func TestManualApplyCreatesAndRollbackRemovesDeclaredFile(t *testing.T) {
+	targetRoot := t.TempDir()
+	stateRoot := t.TempDir()
+	replacement := []byte("new managed file")
+	manifest := contract.Manifest{
+		Component: "sub2api", PatchVersion: "1.0.0", ReleaseID: "test",
+		Patch: contract.Patch{Files: []contract.PatchFile{{
+			Path: "internal/new.go", BundlePath: "payload/internal/new.go", Create: true, ResultSHA256: sum(replacement),
+		}}},
+		Deployment: contract.Deployment{AllowedModes: []string{"manual"}},
+	}
+	path := filepath.Join(targetRoot, "internal", "new.go")
+	if err := Apply(context.Background(), targetRoot, stateRoot, "manual", manifest, bundle(t, "payload/internal/new.go", replacement)); err != nil {
+		t.Fatal(err)
+	}
+	assertFile(t, path, replacement)
+	if err := Rollback(context.Background(), stateRoot, "sub2api"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("created file survived rollback: %v", err)
+	}
+}
+
 func bundle(t *testing.T, name string, body []byte) []byte {
 	t.Helper()
 	var output bytes.Buffer
