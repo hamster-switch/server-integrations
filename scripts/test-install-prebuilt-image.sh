@@ -68,6 +68,22 @@ echo "$*" >>"${DOCKER_LOG}"
 if [[ "$*" == "compose version" ]]; then
   exit 0
 fi
+if [[ "$*" == "ps --format {{.ID}}|{{.Image}}|{{.Label \"com.docker.compose.service\"}}" ]]; then
+  if [[ "${MOCK_MULTIPLE_CONTAINERS:-0}" == "1" ]]; then
+    printf 'container-one|hamster-switch/sub2api:hs-v1.0.0|sub2api\ncontainer-two|hamster-switch/sub2api:hs-v1.0.0|sub2api\n'
+  elif [[ -n "${MOCK_COMPOSE_TARGET:-}" ]]; then
+    echo 'running-container-id|hamster-switch/sub2api:hs-v1.0.0|sub2api'
+  fi
+  exit 0
+fi
+if [[ "$*" == inspect*com.docker.compose.project.working_dir* ]]; then
+  echo "${MOCK_COMPOSE_TARGET}"
+  exit 0
+fi
+if [[ "$*" == inspect*com.docker.compose.project.config_files* ]]; then
+  echo "${MOCK_COMPOSE_TARGET}/deploy/docker-compose.yml"
+  exit 0
+fi
 if [[ "$*" == "load" ]]; then
   cat >/dev/null
   exit 0
@@ -105,8 +121,9 @@ success_target="${test_root}/success"
 success_log="${test_root}/success-docker.log"
 write_compose "${success_target}"
 FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${success_log}" MOCK_HEALTH=healthy \
+  MOCK_COMPOSE_TARGET="${success_target}" \
   PATH="${fake_bin}:${PATH}" \
-  bash "${installer}" --target "${success_target}"
+  bash "${installer}"
 
 grep -q 'image: hamster-switch/sub2api:hs-v1.2.3' "${success_target}/deploy/docker-compose.yml"
 grep -q 'image: postgres:18-alpine' "${success_target}/deploy/docker-compose.yml"
@@ -126,5 +143,12 @@ fi
 
 grep -q 'image: hamster-switch/sub2api:hs-v1.0.0' "${rollback_target}/deploy/docker-compose.yml"
 [[ "$(grep -c 'up -d --no-build sub2api' "${rollback_log}")" -eq 2 ]]
+
+ambiguous_log="${test_root}/ambiguous-docker.log"
+if FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${ambiguous_log}" MOCK_MULTIPLE_CONTAINERS=1 \
+  PATH="${fake_bin}:${PATH}" bash "${installer}"; then
+  echo 'expected ambiguous auto-detection to fail' >&2
+  exit 1
+fi
 
 echo 'prebuilt image installer tests passed'
