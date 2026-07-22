@@ -17,7 +17,7 @@ import (
 	"github.com/hamster-switch/server-integrations/internal/updater"
 )
 
-const version = "0.3.0"
+const version = "0.3.1"
 
 type options struct {
 	target   string
@@ -110,6 +110,10 @@ func run(args []string) error {
 	}
 	if command == "check" {
 		fmt.Println("检查完成：未下载补丁包，未修改源码，未构建或重启。")
+		return nil
+	}
+	if report.Installed {
+		fmt.Printf("补丁 %s 已精确安装；无需重复应用。\n", verified.Tag)
 		return nil
 	}
 	if runtime.GOOS != "linux" {

@@ -68,14 +68,20 @@ func Apply(ctx context.Context, targetRoot, stateRoot, mode string, manifest con
 	if err := os.MkdirAll(backupDir, 0o700); err != nil {
 		return fmt.Errorf("create backup directory: %w", err)
 	}
+	createdFiles := make([]string, 0)
 	for _, patch := range manifest.Patch.Files {
 		source := filepath.Join(targetRoot, filepath.FromSlash(patch.Path))
 		if patch.Create {
-			if _, err := os.Lstat(source); !errors.Is(err, os.ErrNotExist) {
-				if err == nil {
-					return fmt.Errorf("create target already exists: %s", patch.Path)
-				}
+			body, err := os.ReadFile(source)
+			if errors.Is(err, os.ErrNotExist) {
+				createdFiles = append(createdFiles, patch.Path)
+				continue
+			}
+			if err != nil {
 				return fmt.Errorf("inspect create target %s: %w", patch.Path, err)
+			}
+			if digest(body) != patch.ResultSHA256 {
+				return fmt.Errorf("create target drift detected for %s", patch.Path)
 			}
 			continue
 		}
@@ -83,7 +89,8 @@ func Apply(ctx context.Context, targetRoot, stateRoot, mode string, manifest con
 		if err != nil {
 			return fmt.Errorf("read source %s: %w", patch.Path, err)
 		}
-		if digest(body) != patch.SourceSHA256 {
+		actual := digest(body)
+		if actual != patch.SourceSHA256 && actual != patch.ResultSHA256 {
 			return fmt.Errorf("source drift detected for %s", patch.Path)
 		}
 		backup := filepath.Join(backupDir, filepath.FromSlash(patch.Path))
@@ -100,11 +107,7 @@ func Apply(ctx context.Context, targetRoot, stateRoot, mode string, manifest con
 		BackupDir: backupDir, Mode: mode, Deployment: manifest.Deployment,
 		AppliedAt: time.Now().UTC(), LastResult: "applying",
 	}
-	for _, patch := range manifest.Patch.Files {
-		if patch.Create {
-			state.CreatedFiles = append(state.CreatedFiles, patch.Path)
-		}
-	}
+	state.CreatedFiles = createdFiles
 	if err := writeState(stateRoot, state); err != nil {
 		return err
 	}
