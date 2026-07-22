@@ -23,6 +23,24 @@ only the verified source files and reports the remaining build/restart steps.
 `systemd` and `docker-compose` accept only the structured, signed operations in
 the release manifest; arbitrary shell hooks are not supported.
 
+## Prebuilt image installation
+
+Image Releases contain the compiled Docker image, a version-bound installer,
+and `SHA256SUMS`. The installer verifies the image before `docker load`, changes
+only the selected Compose service image, recreates that service with
+`--no-build`, waits for health, and restores the Compose backup on failure.
+
+For a standard deployment at `/srv/sub2api`, one shell line installs v1.0.1
+without compiling on the target server:
+
+```bash
+tmp=$(mktemp -d) && cd "$tmp" && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-v1.0.1/install-sub2api-v1.0.1.sh && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-v1.0.1/SHA256SUMS && sha256sum -c SHA256SUMS --ignore-missing && sudo bash install-sub2api-v1.0.1.sh
+```
+
+Use `--target /absolute/path` when the deployment is elsewhere. The target must
+already contain `deploy/docker-compose.yml`, `docker-compose.yml`, or
+`compose.yml`; persistent database and Redis volumes are not modified.
+
 ## Release trust root
 
 The embedded public key is documented in

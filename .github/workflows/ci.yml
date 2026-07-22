@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -22,6 +22,7 @@ jobs:
       - run: go test -race ./...
       - run: go vet ./...
       - run: go build ./cmd/hamster-integrations
+      - run: bash scripts/test-install-prebuilt-image.sh
       - run: GOOS=linux GOARCH=amd64 go build -trimpath -o dist/hamster-integrations-linux-amd64 ./cmd/hamster-integrations
       - name: Verify configured signing key matches embedded trust root
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'

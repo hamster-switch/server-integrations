@@ -46,6 +46,14 @@ in a Release asset.
 - CLI/source tags: `cli-vMAJOR.MINOR.PATCH`.
 - Component patch tags: `<component>-vMAJOR.MINOR.PATCH`.
 - Component patch assets: `<component>-patch-<patch-version>.tar.gz`.
+- Prebuilt image tags: `image-<component>-vMAJOR.MINOR.PATCH`.
+- A prebuilt image Release contains the compiled image archive, a
+  version-bound installer, and `SHA256SUMS`; it is created once and never
+  overwritten.
+- The image installer accepts only an existing absolute deployment target. It
+  verifies the archive, loads the exact `hamster-switch/<component>:hs-v<version>`
+  image, rewrites exactly one Compose service image, uses `--no-build`, waits
+  for container health, and restores its Compose backup if deployment fails.
 - Release IDs and patch versions are immutable after publication.
 - A corrected payload receives a new version; Release assets are never replaced
   in place.

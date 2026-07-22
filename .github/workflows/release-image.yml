@@ -21,7 +21,7 @@ jobs:
     if: github.repository == 'hamster-switch/server-integrations'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -39,21 +39,45 @@ jobs:
           git clone "$REPO" /tmp/upstream
           git -C /tmp/upstream checkout "$COMMIT"
           /tmp/hamint update ${{ inputs.component }} --target /tmp/upstream --mode manual --yes
-      - name: Build image and publish as public Release asset
+      - name: Build image and prepare verified installer assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPONENT: ${{ inputs.component }}
           VERSION: ${{ inputs.version }}
         run: |
           set -eu
           IMAGE="hamster-switch/${COMPONENT}:hs-v${VERSION}"
           ASSET="${COMPONENT}-image-v${VERSION}.tar.gz"
-          TAG="image-${COMPONENT}-v${VERSION}"
+          INSTALLER="install-${COMPONENT}-v${VERSION}.sh"
           docker build -t "$IMAGE" /tmp/upstream
           docker save "$IMAGE" | gzip > "/tmp/${ASSET}"
+          sed \
+            -e "s/__COMPONENT__/${COMPONENT}/g" \
+            -e "s/__VERSION__/${VERSION}/g" \
+            scripts/install-prebuilt-image.sh > "/tmp/${INSTALLER}"
+          chmod 0755 "/tmp/${INSTALLER}"
+          (
+            cd /tmp
+            sha256sum "$ASSET" "$INSTALLER" > SHA256SUMS
+          )
+      - name: Publish immutable public image Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPONENT: ${{ inputs.component }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -eu
+          ASSET="${COMPONENT}-image-v${VERSION}.tar.gz"
+          INSTALLER="install-${COMPONENT}-v${VERSION}.sh"
+          TAG="image-${COMPONENT}-v${VERSION}"
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" "/tmp/${ASSET}" --clobber -R "$GITHUB_REPOSITORY"
-          else
-            gh release create "$TAG" "/tmp/${ASSET}" --title "$TAG" --notes "Prebuilt patched image for ${COMPONENT} v${VERSION}" -R "$GITHUB_REPOSITORY"
+            echo "Release $TAG already exists; published assets are immutable." >&2
+            exit 1
           fi
+          gh release create "$TAG" \
+            "/tmp/${ASSET}" \
+            "/tmp/${INSTALLER}" \
+            /tmp/SHA256SUMS \
+            --title "$TAG" \
+            --notes "Prebuilt patched image and verified installer for ${COMPONENT} v${VERSION}" \
+            -R "$GITHUB_REPOSITORY"
           echo "ASSET_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET" >> "$GITHUB_STEP_SUMMARY"
