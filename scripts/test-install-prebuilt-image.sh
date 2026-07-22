@@ -6,6 +6,11 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 test_root="$(mktemp -d)"
 trap 'rm -rf -- "${test_root}"' EXIT
 
+if LC_ALL=C grep -q $'\r' "${repo_root}/scripts/install-prebuilt-image.sh"; then
+  echo 'installer template must use LF line endings' >&2
+  exit 1
+fi
+
 installer="${test_root}/install-sub2api-v1.2.3.sh"
 sed \
   -e 's/__COMPONENT__/sub2api/g' \
