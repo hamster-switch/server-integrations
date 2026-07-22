@@ -12,6 +12,8 @@ readonly RELEASE_BASE_URL="https://github.com/${REPOSITORY}/releases/download/${
 
 TARGET_DIR=""
 COMPOSE_FILE=""
+PROJECT_DIR=""
+PROJECT_NAME=""
 TARGET_EXPLICIT=0
 COMPOSE_EXPLICIT=0
 TEMP_DIR=""
@@ -103,9 +105,12 @@ if [[ "${TARGET_EXPLICIT}" -eq 0 && "${COMPOSE_EXPLICIT}" -eq 0 ]]; then
   fi
   if [[ "${#compose_containers[@]}" -eq 1 ]]; then
     container_id="${compose_containers[0]}"
-    TARGET_DIR="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "${container_id}")"
+    PROJECT_DIR="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "${container_id}")"
+    TARGET_DIR="${PROJECT_DIR}"
+    PROJECT_NAME="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "${container_id}")"
     compose_files="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "${container_id}")"
     [[ "${TARGET_DIR}" != "<no value>" ]] || TARGET_DIR=""
+    [[ "${PROJECT_NAME}" != "<no value>" ]] || PROJECT_NAME=""
     [[ "${compose_files}" != "<no value>" ]] || compose_files=""
     COMPOSE_FILE="${compose_files%%,*}"
     if [[ -n "${COMPOSE_FILE}" && "${COMPOSE_FILE}" != /* ]]; then
@@ -149,8 +154,22 @@ fi
 [[ "${COMPOSE_FILE}" == /* ]] || fail "--compose-file must be an absolute path"
 [[ -f "${COMPOSE_FILE}" ]] || fail "Compose file does not exist: ${COMPOSE_FILE}"
 
+if [[ -z "${PROJECT_DIR}" ]]; then
+  PROJECT_DIR="${TARGET_DIR}"
+fi
+[[ "${PROJECT_DIR}" == /* && -d "${PROJECT_DIR}" ]] || fail "Compose project working directory is invalid: ${PROJECT_DIR}"
+
+COMPOSE_ARGS=(-f "${COMPOSE_FILE}")
+if [[ -n "${PROJECT_NAME}" ]]; then
+  COMPOSE_ARGS=(-p "${PROJECT_NAME}" "${COMPOSE_ARGS[@]}")
+fi
+
 echo "Detected Compose project: ${TARGET_DIR}"
 echo "Using Compose file: ${COMPOSE_FILE}"
+echo "Using Compose working directory: ${PROJECT_DIR}"
+if [[ -n "${PROJECT_NAME}" ]]; then
+  echo "Using Compose project name: ${PROJECT_NAME}"
+fi
 
 rewrite_compose() {
   awk -v service="${COMPONENT}" -v image="${IMAGE}" '
@@ -216,32 +235,29 @@ if ! cmp -s "${COMPOSE_FILE}" "${NEXT_COMPOSE}"; then
   COMPOSE_CHANGED=1
 fi
 
-compose_dir="$(dirname "${COMPOSE_FILE}")"
-compose_name="$(basename "${COMPOSE_FILE}")"
-
 rollback_compose() {
   if [[ "${COMPOSE_CHANGED}" -eq 1 && -f "${BACKUP_FILE}" ]]; then
     echo "Restoring Compose backup ${BACKUP_FILE}..." >&2
     cp -p -- "${BACKUP_FILE}" "${COMPOSE_FILE}"
     (
-      cd "${compose_dir}"
-      "${COMPOSE_COMMAND[@]}" -f "${compose_name}" up -d --no-build "${COMPONENT}"
+      cd "${PROJECT_DIR}"
+      "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" up -d --no-build "${COMPONENT}"
     ) || echo "warning: failed to restart the previous image" >&2
   fi
 }
 
 echo "Recreating ${COMPONENT} without a local build..."
 if ! (
-  cd "${compose_dir}"
-  "${COMPOSE_COMMAND[@]}" -f "${compose_name}" up -d --no-build "${COMPONENT}"
+  cd "${PROJECT_DIR}"
+  "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" up -d --no-build "${COMPONENT}"
 ); then
   rollback_compose
   fail "Docker Compose failed; the previous Compose file was restored"
 fi
 
 container_id="$(
-  cd "${compose_dir}"
-  "${COMPOSE_COMMAND[@]}" -f "${compose_name}" ps -q "${COMPONENT}"
+  cd "${PROJECT_DIR}"
+  "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" ps -q "${COMPONENT}"
 )"
 if [[ -z "${container_id}" ]]; then
   rollback_compose
