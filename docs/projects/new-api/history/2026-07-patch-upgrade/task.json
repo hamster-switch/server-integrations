@@ -1,0 +1,30 @@
+{
+  "id": "new-api-patch-upgrade",
+  "name": "new-api-patch-upgrade",
+  "title": "new-api 补丁功能与页面升级",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "louie",
+  "assignee": "louie",
+  "createdAt": "2026-07-19",
+  "completedAt": "2026-07-19",
+  "branch": "feat/new-api-config-subscriptions-v1",
+  "base_branch": "master_new",
+  "worktree_path": null,
+  "commit": "ac071039decf7cef2c97dc3dd902b84de4369df8",
+  "pr_url": "https://github.com/hamster-switch/server-integrations/releases/tag/new-api-v1.0.0",
+  "subtasks": [],
+  "children": [],
+  "parent": "07-19-719-update-planning",
+  "relatedFiles": [],
+  "notes": "new-api-v1.0.0 已通过 Git 标签触发正式签名 Release；server-integrations/main 受保护，功能分支已推送。",
+  "meta": {
+    "external_repository": "hamster-switch/server-integrations",
+    "release_tag": "new-api-v1.0.0",
+    "release_url": "https://github.com/hamster-switch/server-integrations/releases/tag/new-api-v1.0.0"
+  }
+}
