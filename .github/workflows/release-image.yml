@@ -38,7 +38,11 @@ jobs:
           COMMIT=$(python3 -c "import json;d=json.load(open('releases/${{ inputs.component }}/${{ inputs.version }}/manifest.template.json'));print(d['upstream']['commit'])")
           git clone "$REPO" /tmp/upstream
           git -C /tmp/upstream checkout "$COMMIT"
-          /tmp/hamint update ${{ inputs.component }} --target /tmp/upstream --mode manual --yes
+          /tmp/hamint update ${{ inputs.component }} \
+            --target /tmp/upstream \
+            --release "${{ inputs.component }}-v${{ inputs.version }}" \
+            --mode manual \
+            --yes
       - name: Build image and prepare verified installer assets
         env:
           COMPONENT: ${{ inputs.component }}
