@@ -10,8 +10,10 @@ readonly RELEASE_TAG="image-${COMPONENT}-v${VERSION}"
 readonly IMAGE_ASSET="${COMPONENT}-image-v${VERSION}.tar.gz"
 readonly RELEASE_BASE_URL="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
 
-TARGET_DIR="/srv/${COMPONENT}"
+TARGET_DIR=""
 COMPOSE_FILE=""
+TARGET_EXPLICIT=0
+COMPOSE_EXPLICIT=0
 TEMP_DIR=""
 NEXT_COMPOSE=""
 BACKUP_FILE=""
@@ -23,6 +25,7 @@ Usage: $0 [--target ABSOLUTE_PATH] [--compose-file ABSOLUTE_PATH]
 
 Loads the verified ${IMAGE} image, switches only the ${COMPONENT} Compose
 service to that image, recreates it without building, and waits for health.
+With no arguments, the running Compose container is detected automatically.
 EOF
 }
 
@@ -47,11 +50,13 @@ while [[ $# -gt 0 ]]; do
     --target)
       [[ $# -ge 2 ]] || fail "--target requires a value"
       TARGET_DIR="$2"
+      TARGET_EXPLICIT=1
       shift 2
       ;;
     --compose-file)
       [[ $# -ge 2 ]] || fail "--compose-file requires a value"
       COMPOSE_FILE="$2"
+      COMPOSE_EXPLICIT=1
       shift 2
       ;;
     -h|--help)
@@ -65,18 +70,74 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$(id -u)" -eq 0 ]] || fail "run this installer as root (for example with sudo)"
-[[ "${TARGET_DIR}" == /* ]] || fail "--target must be an absolute path"
-[[ -d "${TARGET_DIR}" ]] || fail "target directory does not exist: ${TARGET_DIR}"
 
-for command_name in awk basename chmod chown cmp cp curl date dirname docker gzip mktemp mv sha256sum; do
+for command_name in awk basename chmod chown cmp cp curl date dirname docker grep gzip mktemp mv sha256sum; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "missing required command: ${command_name}"
 done
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_COMMAND=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_COMMAND=(docker-compose)
+else
+  fail "Docker Compose is not available"
+fi
+
+if [[ "${COMPOSE_EXPLICIT}" -eq 1 ]]; then
+  [[ "${COMPOSE_FILE}" == /* ]] || fail "--compose-file must be an absolute path"
+  [[ -f "${COMPOSE_FILE}" ]] || fail "Compose file does not exist: ${COMPOSE_FILE}"
+  if [[ "${TARGET_EXPLICIT}" -eq 0 ]]; then
+    TARGET_DIR="$(dirname "${COMPOSE_FILE}")"
+  fi
+fi
+
+if [[ "${TARGET_EXPLICIT}" -eq 0 && "${COMPOSE_EXPLICIT}" -eq 0 ]]; then
+  mapfile -t compose_containers < <(
+    docker ps --format '{{.ID}}|{{.Image}}|{{.Label "com.docker.compose.service"}}' |
+      awk -F '|' -v component="${COMPONENT}" '
+        $3 == component || index($2, "hamster-switch/" component ":") == 1 { print $1 }
+      '
+  )
+  if [[ "${#compose_containers[@]}" -gt 1 ]]; then
+    fail "multiple running ${COMPONENT} Compose services found; use --compose-file to select one"
+  fi
+  if [[ "${#compose_containers[@]}" -eq 1 ]]; then
+    container_id="${compose_containers[0]}"
+    TARGET_DIR="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "${container_id}")"
+    compose_files="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "${container_id}")"
+    [[ "${TARGET_DIR}" != "<no value>" ]] || TARGET_DIR=""
+    [[ "${compose_files}" != "<no value>" ]] || compose_files=""
+    COMPOSE_FILE="${compose_files%%,*}"
+    if [[ -n "${COMPOSE_FILE}" && "${COMPOSE_FILE}" != /* ]]; then
+      COMPOSE_FILE="${TARGET_DIR}/${COMPOSE_FILE}"
+    fi
+  fi
+fi
+
+if [[ -z "${TARGET_DIR}" ]]; then
+  for candidate in "${PWD}" "/srv/${COMPONENT}" "/opt/${COMPONENT}"; do
+    if [[ -d "${candidate}" ]]; then
+      for compose_candidate in "${candidate}/deploy/docker-compose.yml" "${candidate}/docker-compose.yml" "${candidate}/compose.yml" "${candidate}/compose.yaml"; do
+        if [[ -f "${compose_candidate}" ]] && grep -Eq "^[[:space:]]{2}${COMPONENT}:[[:space:]]*$" "${compose_candidate}"; then
+          TARGET_DIR="${candidate}"
+          COMPOSE_FILE="${compose_candidate}"
+          break 2
+        fi
+      done
+    fi
+  done
+fi
+
+[[ -n "${TARGET_DIR}" ]] || fail "could not auto-detect the ${COMPONENT} Compose project; use --compose-file /absolute/path/to/compose.yml"
+[[ "${TARGET_DIR}" == /* ]] || fail "--target must be an absolute path"
+[[ -d "${TARGET_DIR}" ]] || fail "target directory does not exist: ${TARGET_DIR}"
 
 if [[ -z "${COMPOSE_FILE}" ]]; then
   for candidate in \
     "${TARGET_DIR}/deploy/docker-compose.yml" \
     "${TARGET_DIR}/docker-compose.yml" \
-    "${TARGET_DIR}/compose.yml"; do
+    "${TARGET_DIR}/compose.yml" \
+    "${TARGET_DIR}/compose.yaml"; do
     if [[ -f "${candidate}" ]]; then
       COMPOSE_FILE="${candidate}"
       break
@@ -88,13 +149,8 @@ fi
 [[ "${COMPOSE_FILE}" == /* ]] || fail "--compose-file must be an absolute path"
 [[ -f "${COMPOSE_FILE}" ]] || fail "Compose file does not exist: ${COMPOSE_FILE}"
 
-if docker compose version >/dev/null 2>&1; then
-  COMPOSE_COMMAND=(docker compose)
-elif command -v docker-compose >/dev/null 2>&1; then
-  COMPOSE_COMMAND=(docker-compose)
-else
-  fail "Docker Compose is not available"
-fi
+echo "Detected Compose project: ${TARGET_DIR}"
+echo "Using Compose file: ${COMPOSE_FILE}"
 
 rewrite_compose() {
   awk -v service="${COMPONENT}" -v image="${IMAGE}" '
