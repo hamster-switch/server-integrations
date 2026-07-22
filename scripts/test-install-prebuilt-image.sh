@@ -80,6 +80,10 @@ if [[ "$*" == inspect*com.docker.compose.project.working_dir* ]]; then
   echo "${MOCK_COMPOSE_TARGET}"
   exit 0
 fi
+if [[ "$*" == inspect*com.docker.compose.project* && "$*" != *config_files* && "$*" != *working_dir* ]]; then
+  echo 'original-project-name'
+  exit 0
+fi
 if [[ "$*" == inspect*com.docker.compose.project.config_files* ]]; then
   echo "${MOCK_COMPOSE_TARGET}/deploy/docker-compose.yml"
   exit 0
@@ -128,7 +132,7 @@ FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${success_log}" MOCK_HEALTH=healthy \
 grep -q 'image: hamster-switch/sub2api:hs-v1.2.3' "${success_target}/deploy/docker-compose.yml"
 grep -q 'image: postgres:18-alpine' "${success_target}/deploy/docker-compose.yml"
 grep -q 'load' "${success_log}"
-grep -q 'up -d --no-build sub2api' "${success_log}"
+grep -q 'compose -p original-project-name -f .* up -d --no-build sub2api' "${success_log}"
 compgen -G "${success_target}/deploy/docker-compose.yml.hamster-switch.*.bak" >/dev/null
 
 rollback_target="${test_root}/rollback"
