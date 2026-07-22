@@ -12,7 +12,7 @@
     "files": [
       {
         "path": "backend/smoke.go",
-        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        "sha256": "a6c5d1a4993cb31306669f148dd5b2d2fb0d33f332b3effe0aef1feb48218f24"
       }
     ],
     "anchors": [
@@ -25,7 +25,7 @@
   "assets": [
     {
       "name": "smoke-patch.tar.gz",
-      "sha256": "filled-by-builder",
+      "sha256": "2fcb38f692f69b7f7e5ca759236fc2f4ed2976c669a3352377827634219c3f76",
       "media_type": "application/gzip"
     }
   ],
@@ -35,14 +35,18 @@
       {
         "path": "backend/smoke.go",
         "bundle_path": "payload/backend/smoke.go",
-        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "result_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        "source_sha256": "a6c5d1a4993cb31306669f148dd5b2d2fb0d33f332b3effe0aef1feb48218f24",
+        "result_sha256": "0f46397587910671f36f9a1b28e4204800411555a1f2645d45186f8dc17901f8"
       }
     ]
   },
   "deployment": {
-    "allowed_modes": ["manual"],
-    "manual_steps": ["signing smoke only"]
+    "allowed_modes": [
+      "manual"
+    ],
+    "manual_steps": [
+      "signing smoke only"
+    ]
   },
   "impact_notes": [
     {
