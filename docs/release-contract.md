@@ -76,12 +76,12 @@ in a Release asset.
   `<component>-<channel>-patch-<patch-version>.tar.gz`.
 - Independent channel image tags:
   `image-<component>-<channel>-vMAJOR.MINOR.PATCH`.
-- A prebuilt image Release contains the compiled image archive, a
-  version-bound installer, and `SHA256SUMS`; it is created once and never
-  overwritten.
-- The image installer accepts only an existing absolute deployment target. It
-  verifies the archive, loads the exact `hamster-switch/<component>:hs-v<version>`
-  default-channel image or
+- A prebuilt Release contains the compiled image archive, a Linux amd64 binary
+  with embedded frontend, a version-bound installer, and `SHA256SUMS`; it is
+  created once and never overwritten.
+- In Compose mode, the prebuilt installer accepts only an existing absolute
+  deployment target. It verifies the archive, loads the exact
+  `hamster-switch/<component>:hs-v<version>` default-channel image or
   `hamster-switch/<component>:<channel>-v<version>` channel image, rewrites
   exactly one Compose service image, uses `--no-build`, waits for container
   health, and restores its Compose backup if deployment fails.
@@ -90,6 +90,11 @@ in a Release asset.
   container is selected, the verified image is applied to the exact Compose
   service and project paths reported by Docker labels. Ambiguous detection is
   rejected; administrators can provide both `--compose-file` and `--service`.
+- When an existing component systemd service is loaded, automatic detection
+  selects it before Compose. The installer takes the binary path from
+  `ExecStart`, preserves owner and mode, keeps a timestamped backup, atomically
+  replaces the binary, checks service state and HTTP health, and restores the
+  previous binary on failure. It never rewrites the unit or environment file.
 - Release IDs and patch versions are immutable after publication.
 - A corrected payload receives a new version; Release assets are never replaced
   in place.

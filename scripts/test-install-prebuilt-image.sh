@@ -38,9 +38,15 @@ fake_bin="${test_root}/bin"
 mkdir -p "${fixture_root}" "${fake_bin}"
 printf 'fake docker image archive\n' | gzip >"${fixture_root}/sub2api-image-v1.2.3.tar.gz"
 printf 'fake hamster channel image archive\n' | gzip >"${fixture_root}/sub2api-hamster-image-v1.2.3.tar.gz"
+printf 'patched systemd binary\n' | gzip >"${fixture_root}/sub2api-linux-amd64-v1.2.3.gz"
+printf 'patched hamster systemd binary\n' | gzip >"${fixture_root}/sub2api-hamster-linux-amd64-v1.2.3.gz"
 (
   cd "${fixture_root}"
-  sha256sum sub2api-image-v1.2.3.tar.gz sub2api-hamster-image-v1.2.3.tar.gz >SHA256SUMS
+  sha256sum \
+    sub2api-image-v1.2.3.tar.gz \
+    sub2api-hamster-image-v1.2.3.tar.gz \
+    sub2api-linux-amd64-v1.2.3.gz \
+    sub2api-hamster-linux-amd64-v1.2.3.gz >SHA256SUMS
 )
 
 cat >"${fake_bin}/id" <<'EOF'
@@ -62,10 +68,15 @@ cat >"${fake_bin}/curl" <<'EOF'
 set -euo pipefail
 output=""
 url=""
+write_out=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
       output="$2"
+      shift 2
+      ;;
+    --write-out)
+      write_out="$2"
       shift 2
       ;;
     http://*|https://*)
@@ -78,7 +89,66 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "${output}" && -n "${url}" ]]
+if [[ -n "${write_out}" ]]; then
+  if [[ -n "${CURL_LOG:-}" ]]; then
+    echo "${url}" >>"${CURL_LOG}"
+  fi
+  printf '%s' "${MOCK_HTTP_STATUS:-200}"
+  exit 0
+fi
 cp "${FIXTURE_ROOT}/${url##*/}" "${output}"
+EOF
+
+cat >"${fake_bin}/uname" <<'EOF'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "-m" ]]; then
+  echo x86_64
+  exit 0
+fi
+exec /usr/bin/uname "$@"
+EOF
+
+cat >"${fake_bin}/sleep" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+
+cat >"${fake_bin}/systemctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "${SYSTEMD_LOG:-}" ]]; then
+  echo "$*" >>"${SYSTEMD_LOG}"
+fi
+if [[ "$*" == *"--property=LoadState --value"* ]]; then
+  if [[ "${MOCK_SYSTEMD_LOADED:-0}" == "1" ]]; then
+    echo loaded
+  else
+    echo not-found
+  fi
+  exit 0
+fi
+if [[ "$*" == *"--property=ExecStart --value"* ]]; then
+  echo "{ path=${MOCK_BINARY_PATH}; argv[]=${MOCK_BINARY_PATH}; ignore_errors=no ; }"
+  exit 0
+fi
+if [[ "$*" == *"--property=EnvironmentFiles --value"* ]]; then
+  echo "${MOCK_ENV_FILE:-}"
+  exit 0
+fi
+case "${1:-}" in
+  is-active)
+    [[ "$(cat "${SYSTEMD_STATE_FILE}")" == active ]]
+    ;;
+  stop)
+    echo inactive >"${SYSTEMD_STATE_FILE}"
+    ;;
+  start)
+    echo active >"${SYSTEMD_STATE_FILE}"
+    ;;
+  *)
+    exit 0
+    ;;
+esac
 EOF
 
 cat >"${fake_bin}/docker" <<'EOF'
@@ -131,6 +201,50 @@ exit 0
 EOF
 
 chmod 0755 "${fake_bin}"/*
+
+systemd_success="${test_root}/systemd-success"
+systemd_success_log="${test_root}/systemd-success.log"
+systemd_success_curl_log="${test_root}/systemd-success-curl.log"
+systemd_success_state="${test_root}/systemd-success.state"
+mkdir -p "${systemd_success}"
+printf 'previous systemd binary\n' >"${systemd_success}/sub2api"
+chmod 0755 "${systemd_success}/sub2api"
+printf 'SERVER_PORT=8181\n' >"${systemd_success}/sub2api.env"
+echo active >"${systemd_success_state}"
+FIXTURE_ROOT="${fixture_root}" MOCK_SYSTEMD_LOADED=1 \
+  MOCK_BINARY_PATH="${systemd_success}/sub2api" \
+  MOCK_ENV_FILE="${systemd_success}/sub2api.env (ignore_errors=no)" \
+  SYSTEMD_LOG="${systemd_success_log}" SYSTEMD_STATE_FILE="${systemd_success_state}" \
+  CURL_LOG="${systemd_success_curl_log}" MOCK_HTTP_STATUS=200 \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${hamster_installer}"
+
+grep -q 'patched hamster systemd binary' "${systemd_success}/sub2api"
+grep -q 'stop sub2api.service' "${systemd_success_log}"
+grep -q 'start sub2api.service' "${systemd_success_log}"
+grep -q 'http://127.0.0.1:8181/health' "${systemd_success_curl_log}"
+compgen -G "${systemd_success}/sub2api.hamster-switch.*.bak" >/dev/null
+[[ "$(cat "${systemd_success_state}")" == active ]]
+
+systemd_rollback="${test_root}/systemd-rollback"
+systemd_rollback_log="${test_root}/systemd-rollback.log"
+systemd_rollback_state="${test_root}/systemd-rollback.state"
+mkdir -p "${systemd_rollback}"
+printf 'previous systemd binary\n' >"${systemd_rollback}/sub2api"
+chmod 0755 "${systemd_rollback}/sub2api"
+echo active >"${systemd_rollback_state}"
+if FIXTURE_ROOT="${fixture_root}" MOCK_SYSTEMD_LOADED=1 \
+  MOCK_BINARY_PATH="${systemd_rollback}/sub2api" \
+  SYSTEMD_LOG="${systemd_rollback_log}" SYSTEMD_STATE_FILE="${systemd_rollback_state}" \
+  MOCK_HTTP_STATUS=503 PATH="${fake_bin}:${PATH}" \
+  bash "${hamster_installer}" --mode systemd --health-url http://127.0.0.1:9090/health; then
+  echo 'expected unhealthy systemd installation to fail' >&2
+  exit 1
+fi
+
+grep -q 'previous systemd binary' "${systemd_rollback}/sub2api"
+[[ "$(grep -c 'start sub2api.service' "${systemd_rollback_log}")" -eq 2 ]]
+[[ "$(cat "${systemd_rollback_state}")" == active ]]
 
 write_compose() {
   local target="$1"

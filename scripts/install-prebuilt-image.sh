@@ -16,29 +16,49 @@ fi
 readonly IMAGE="hamster-switch/${COMPONENT}:${IMAGE_TAG}"
 readonly RELEASE_TAG="image-${RELEASE_NAME}-v${VERSION}"
 readonly IMAGE_ASSET="${RELEASE_NAME}-image-v${VERSION}.tar.gz"
+readonly BINARY_ASSET="${RELEASE_NAME}-linux-amd64-v${VERSION}.gz"
 readonly RELEASE_BASE_URL="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
 
+MODE="auto"
 TARGET_DIR=""
 COMPOSE_FILE=""
 PROJECT_DIR=""
 PROJECT_NAME=""
 SERVICE_NAME=""
+SYSTEMD_SERVICE="${COMPONENT}.service"
+BINARY_PATH=""
+HEALTH_URL=""
 TARGET_EXPLICIT=0
 COMPOSE_EXPLICIT=0
 SERVICE_EXPLICIT=0
+SYSTEMD_EXPLICIT=0
 TEMP_DIR=""
 NEXT_COMPOSE=""
 BACKUP_FILE=""
 COMPOSE_CHANGED=0
+STAGED_BINARY=""
+SYSTEMD_BACKUP=""
+SYSTEMD_REPLACED=0
+SYSTEMD_WAS_ACTIVE=0
 
 usage() {
   cat <<EOF
-Usage: $0 [--target ABSOLUTE_PATH] [--compose-file ABSOLUTE_PATH] [--service NAME]
+Usage: $0 [--mode auto|compose|systemd] [deployment options]
 
-Loads the verified ${IMAGE} image, switches only the detected or selected
-Compose service to that image, recreates it without building, and waits for
-health. With no arguments, the running Compose container is detected
-automatically, including deployments that use a custom service or image name.
+With no arguments, installs the verified prebuilt release into an existing
+${COMPONENT} systemd service or Docker Compose project and waits for health.
+Docker image: ${IMAGE}
+Systemd asset: ${BINARY_ASSET}
+
+Systemd options:
+  --systemd-service NAME   Service unit (default: ${COMPONENT}.service)
+  --binary ABSOLUTE_PATH  Existing binary to replace (default: ExecStart path)
+  --health-url URL         Health endpoint (default: SERVER_PORT or port 8080)
+
+Compose options:
+  --target ABSOLUTE_PATH
+  --compose-file ABSOLUTE_PATH
+  --service NAME
 EOF
 }
 
@@ -48,18 +68,32 @@ fail() {
 }
 
 cleanup() {
+  local exit_status=$?
+  set +e
+  if [[ "${exit_status}" -ne 0 && "${SYSTEMD_REPLACED}" -eq 1 ]]; then
+    rollback_systemd
+  fi
+  if [[ -n "${STAGED_BINARY}" ]]; then
+    rm -f -- "${STAGED_BINARY}"
+  fi
   if [[ -n "${NEXT_COMPOSE}" ]]; then
     rm -f -- "${NEXT_COMPOSE}"
   fi
   if [[ -n "${TEMP_DIR}" ]]; then
     rm -rf -- "${TEMP_DIR}"
   fi
+  return "${exit_status}"
 }
 
 trap cleanup EXIT
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --mode)
+      [[ $# -ge 2 ]] || fail "--mode requires a value"
+      MODE="$2"
+      shift 2
+      ;;
     --target)
       [[ $# -ge 2 ]] || fail "--target requires a value"
       TARGET_DIR="$2"
@@ -78,6 +112,24 @@ while [[ $# -gt 0 ]]; do
       SERVICE_EXPLICIT=1
       shift 2
       ;;
+    --systemd-service)
+      [[ $# -ge 2 ]] || fail "--systemd-service requires a value"
+      SYSTEMD_SERVICE="$2"
+      SYSTEMD_EXPLICIT=1
+      shift 2
+      ;;
+    --binary)
+      [[ $# -ge 2 ]] || fail "--binary requires a value"
+      BINARY_PATH="$2"
+      SYSTEMD_EXPLICIT=1
+      shift 2
+      ;;
+    --health-url)
+      [[ $# -ge 2 ]] || fail "--health-url requires a value"
+      HEALTH_URL="$2"
+      SYSTEMD_EXPLICIT=1
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -88,15 +140,166 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+case "${MODE}" in
+  auto|compose|systemd) ;;
+  *) fail "--mode must be auto, compose, or systemd" ;;
+esac
+
 if [[ "${SERVICE_EXPLICIT}" -eq 1 && ! "${SERVICE_NAME}" =~ ^[A-Za-z0-9_.-]+$ ]]; then
   fail "--service contains unsupported characters"
+fi
+if [[ ! "${SYSTEMD_SERVICE}" =~ ^[A-Za-z0-9_.@-]+\.service$ ]]; then
+  fail "--systemd-service must name a .service unit"
+fi
+if [[ -n "${BINARY_PATH}" && "${BINARY_PATH}" != /* ]]; then
+  fail "--binary must be an absolute path"
+fi
+if [[ -n "${HEALTH_URL}" && ! "${HEALTH_URL}" =~ ^https?://[^[:space:]]+$ ]]; then
+  fail "--health-url must be an HTTP or HTTPS URL without spaces"
+fi
+
+if [[ "${MODE}" == "systemd" && ( "${TARGET_EXPLICIT}" -eq 1 || "${COMPOSE_EXPLICIT}" -eq 1 || "${SERVICE_EXPLICIT}" -eq 1 ) ]]; then
+  fail "Compose options cannot be used with --mode systemd"
+fi
+if [[ "${MODE}" == "compose" && "${SYSTEMD_EXPLICIT}" -eq 1 ]]; then
+  fail "systemd options cannot be used with --mode compose"
 fi
 
 [[ "$(id -u)" -eq 0 ]] || fail "run this installer as root (for example with sudo)"
 
-for command_name in awk basename chmod chown cmp cp curl date dirname docker grep gzip mktemp mv sha256sum; do
+for command_name in awk basename chmod chown cmp cp curl date dirname grep gzip mktemp mv sha256sum tail; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "missing required command: ${command_name}"
 done
+
+install_systemd() {
+  command -v systemctl >/dev/null 2>&1 || fail "systemctl is not available"
+  command -v uname >/dev/null 2>&1 || fail "uname is not available"
+  [[ "$(uname -m)" == "x86_64" ]] || fail "the prebuilt systemd binary supports Linux x86_64 only"
+
+  local load_state
+  load_state="$(systemctl show "${SYSTEMD_SERVICE}" --property=LoadState --value 2>/dev/null || true)"
+  [[ "${load_state}" == "loaded" ]] || fail "systemd service is not loaded: ${SYSTEMD_SERVICE}"
+
+  if [[ -z "${BINARY_PATH}" ]]; then
+    local exec_start path_part
+    exec_start="$(systemctl show "${SYSTEMD_SERVICE}" --property=ExecStart --value)"
+    if [[ "${exec_start}" == *"path="* ]]; then
+      path_part="${exec_start#*path=}"
+      BINARY_PATH="${path_part%%[ ;]*}"
+    fi
+  fi
+  [[ -n "${BINARY_PATH}" ]] || fail "could not read an absolute binary path from ${SYSTEMD_SERVICE} ExecStart; use --binary"
+  [[ "${BINARY_PATH}" == /* ]] || fail "systemd ExecStart binary is not an absolute path: ${BINARY_PATH}"
+  [[ -f "${BINARY_PATH}" && ! -L "${BINARY_PATH}" ]] || fail "systemd binary must be an existing regular file, not a symlink: ${BINARY_PATH}"
+
+  if [[ -z "${HEALTH_URL}" ]]; then
+    local server_port="8080"
+    local environment_files environment_file candidate_port
+    environment_files="$(systemctl show "${SYSTEMD_SERVICE}" --property=EnvironmentFiles --value 2>/dev/null || true)"
+    for environment_file in ${environment_files}; do
+      [[ "${environment_file}" == /* ]] || continue
+      [[ -f "${environment_file}" ]] || continue
+      candidate_port="$(awk -F= '$1 == "SERVER_PORT" {
+        value=$0
+        sub(/^[^=]*=/, "", value)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        quote=sprintf("%c", 34)
+        single_quote=sprintf("%c", 39)
+        first=substr(value, 1, 1)
+        last=substr(value, length(value), 1)
+        if ((first == quote && last == quote) || (first == single_quote && last == single_quote)) {
+          value=substr(value, 2, length(value) - 2)
+        }
+        print value
+      }' "${environment_file}" | tail -n 1)"
+      if [[ "${candidate_port}" =~ ^[0-9]{1,5}$ && "${candidate_port}" -ge 1 && "${candidate_port}" -le 65535 ]]; then
+        server_port="${candidate_port}"
+      fi
+    done
+    HEALTH_URL="http://127.0.0.1:${server_port}/health"
+  fi
+
+  TEMP_DIR="$(mktemp -d)"
+  local checksums_file="${TEMP_DIR}/SHA256SUMS"
+  local binary_archive="${TEMP_DIR}/${BINARY_ASSET}"
+  echo "Detected systemd service: ${SYSTEMD_SERVICE}"
+  echo "Using binary: ${BINARY_PATH}"
+  echo "Using health endpoint: ${HEALTH_URL}"
+  echo "Downloading ${BINARY_ASSET}..."
+  curl --fail --location --silent --show-error --retry 3 \
+    --connect-timeout 15 --max-time 1800 \
+    --output "${checksums_file}" "${RELEASE_BASE_URL}/SHA256SUMS"
+  curl --fail --location --silent --show-error --retry 3 \
+    --connect-timeout 15 --max-time 1800 \
+    --output "${binary_archive}" "${RELEASE_BASE_URL}/${BINARY_ASSET}"
+
+  local expected_sha256 actual_sha256
+  expected_sha256="$(awk -v name="${BINARY_ASSET}" '$2 == name || $2 == "*" name { print $1 }' "${checksums_file}")"
+  [[ "${expected_sha256}" =~ ^[0-9a-f]{64}$ ]] || fail "SHA256SUMS does not contain ${BINARY_ASSET}"
+  actual_sha256="$(sha256sum "${binary_archive}" | awk '{ print $1 }')"
+  [[ "${actual_sha256}" == "${expected_sha256}" ]] || fail "binary SHA-256 verification failed"
+  gzip -t "${binary_archive}"
+
+  STAGED_BINARY="$(mktemp "${BINARY_PATH}.hamster-switch.XXXXXX")"
+  gzip -dc "${binary_archive}" >"${STAGED_BINARY}"
+  [[ -s "${STAGED_BINARY}" ]] || fail "decompressed binary is empty"
+  chmod --reference="${BINARY_PATH}" "${STAGED_BINARY}"
+  chown --reference="${BINARY_PATH}" "${STAGED_BINARY}"
+
+  SYSTEMD_BACKUP="${BINARY_PATH}.hamster-switch.$(date -u +%Y%m%dT%H%M%SZ).bak"
+  cp -p -- "${BINARY_PATH}" "${SYSTEMD_BACKUP}"
+  if systemctl is-active --quiet "${SYSTEMD_SERVICE}"; then
+    SYSTEMD_WAS_ACTIVE=1
+  fi
+  SYSTEMD_REPLACED=1
+  systemctl stop "${SYSTEMD_SERVICE}"
+  mv -- "${STAGED_BINARY}" "${BINARY_PATH}"
+  STAGED_BINARY=""
+  systemctl start "${SYSTEMD_SERVICE}"
+
+  local health_status=""
+  for _ in {1..60}; do
+    if ! systemctl is-active --quiet "${SYSTEMD_SERVICE}"; then
+      break
+    fi
+    health_status="$(curl --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code}' "${HEALTH_URL}" || true)"
+    if [[ "${health_status}" =~ ^2[0-9][0-9]$ ]]; then
+      SYSTEMD_REPLACED=0
+      echo "Installed ${RELEASE_NAME} v${VERSION}; ${SYSTEMD_SERVICE} is healthy."
+      echo "Previous binary backup: ${SYSTEMD_BACKUP}"
+      return 0
+    fi
+    sleep 2
+  done
+  fail "${SYSTEMD_SERVICE} did not become healthy at ${HEALTH_URL}"
+}
+
+rollback_systemd() {
+  [[ -n "${SYSTEMD_BACKUP}" && -f "${SYSTEMD_BACKUP}" && -n "${BINARY_PATH}" ]] || return 0
+  echo "Restoring systemd binary backup ${SYSTEMD_BACKUP}..." >&2
+  systemctl stop "${SYSTEMD_SERVICE}" >/dev/null 2>&1 || true
+  local restore_path="${BINARY_PATH}.hamster-switch.restore.$$"
+  cp -p -- "${SYSTEMD_BACKUP}" "${restore_path}" || return 0
+  mv -- "${restore_path}" "${BINARY_PATH}" || return 0
+  if [[ "${SYSTEMD_WAS_ACTIVE}" -eq 1 ]]; then
+    systemctl start "${SYSTEMD_SERVICE}" || echo "warning: failed to restart the previous systemd binary" >&2
+  fi
+  SYSTEMD_REPLACED=0
+}
+
+if [[ "${MODE}" == "systemd" || ( "${MODE}" == "auto" && "${SYSTEMD_EXPLICIT}" -eq 1 ) ]]; then
+  install_systemd
+  exit 0
+fi
+
+if [[ "${MODE}" == "auto" && "${TARGET_EXPLICIT}" -eq 0 && "${COMPOSE_EXPLICIT}" -eq 0 && "${SERVICE_EXPLICIT}" -eq 0 ]] && command -v systemctl >/dev/null 2>&1; then
+  if [[ "$(systemctl show "${SYSTEMD_SERVICE}" --property=LoadState --value 2>/dev/null || true)" == "loaded" ]]; then
+    install_systemd
+    exit 0
+  fi
+fi
+
+command -v docker >/dev/null 2>&1 || fail "Docker is not available and no ${COMPONENT} systemd service was detected"
 
 if docker compose version >/dev/null 2>&1; then
   COMPOSE_COMMAND=(docker compose)
