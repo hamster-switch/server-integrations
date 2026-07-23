@@ -13,6 +13,7 @@ const SchemaVersion = 1
 
 var (
 	componentPattern = regexp.MustCompile(`^(sub2api|new-api)$`)
+	channelPattern   = regexp.MustCompile(`^(|hamster)$`)
 	sha256Pattern    = regexp.MustCompile(`^[a-f0-9]{64}$`)
 	servicePattern   = regexp.MustCompile(`^[A-Za-z0-9_.@-]+$`)
 	versionPattern   = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
@@ -22,6 +23,7 @@ type Manifest struct {
 	SchemaVersion int          `json:"schema_version"`
 	ReleaseID     string       `json:"release_id"`
 	Component     string       `json:"component"`
+	Channel       string       `json:"channel,omitempty"`
 	PatchVersion  string       `json:"patch_version"`
 	MinCLI        string       `json:"min_cli_version"`
 	PublishedAt   time.Time    `json:"published_at"`
@@ -111,8 +113,14 @@ func (m Manifest) Validate() error {
 	if !componentPattern.MatchString(m.Component) {
 		return fmt.Errorf("unsupported component %q", m.Component)
 	}
+	if !channelPattern.MatchString(m.Channel) {
+		return fmt.Errorf("unsupported release channel %q", m.Channel)
+	}
 	if strings.TrimSpace(m.ReleaseID) == "" || !versionPattern.MatchString(m.PatchVersion) || !versionPattern.MatchString(m.MinCLI) {
 		return errors.New("release_id, patch_version and min_cli_version are required")
+	}
+	if m.ReleaseID != m.ExpectedReleaseTag() {
+		return fmt.Errorf("release_id must be %q", m.ExpectedReleaseTag())
 	}
 	if m.PublishedAt.IsZero() || strings.TrimSpace(m.Upstream.Repository) == "" || strings.TrimSpace(m.Upstream.Ref) == "" {
 		return errors.New("published_at and upstream repository/ref are required")
@@ -171,6 +179,14 @@ func (m Manifest) Validate() error {
 		}
 	}
 	return m.Deployment.validate()
+}
+
+func (m Manifest) ExpectedReleaseTag() string {
+	name := m.Component
+	if m.Channel != "" {
+		name += "-" + m.Channel
+	}
+	return name + "-v" + m.PatchVersion
 }
 
 func (d Deployment) validate() error {

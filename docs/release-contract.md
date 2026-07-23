@@ -29,9 +29,14 @@ file hashes and anchor strings. `inspect` reports mismatches. `check` and
 shell hook, or a default-branch fallback.
 
 The component fixes the upstream repository (`Wei-Shaw/sub2api` or
-`QuantumNous/new-api`) and requires an exact commit. The Release tag and signed
-`release_id` must both equal `<component>-v<patch_version>`. A stable
-`min_cli_version` newer than the running CLI is also a hard stop.
+`QuantumNous/new-api`) and requires an exact commit. The optional signed
+`channel` is restricted to a repository-defined allowlist. With no channel,
+the Release tag and signed `release_id` must both equal
+`<component>-v<patch_version>`; with a channel they must both equal
+`<component>-<channel>-v<patch_version>`. Default release discovery continues
+to select only the no-channel history. A channel Release must be selected by
+its exact tag. A stable `min_cli_version` newer than the running CLI is also a
+hard stop.
 
 ## Stored defaults and reactive editor compatibility
 
@@ -65,13 +70,21 @@ in a Release asset.
 - Component patch tags: `<component>-vMAJOR.MINOR.PATCH`.
 - Component patch assets: `<component>-patch-<patch-version>.tar.gz`.
 - Prebuilt image tags: `image-<component>-vMAJOR.MINOR.PATCH`.
+- Independent channel patch tags:
+  `<component>-<channel>-vMAJOR.MINOR.PATCH`.
+- Independent channel patch assets:
+  `<component>-<channel>-patch-<patch-version>.tar.gz`.
+- Independent channel image tags:
+  `image-<component>-<channel>-vMAJOR.MINOR.PATCH`.
 - A prebuilt image Release contains the compiled image archive, a
   version-bound installer, and `SHA256SUMS`; it is created once and never
   overwritten.
 - The image installer accepts only an existing absolute deployment target. It
   verifies the archive, loads the exact `hamster-switch/<component>:hs-v<version>`
-  image, rewrites exactly one Compose service image, uses `--no-build`, waits
-  for container health, and restores its Compose backup if deployment fails.
+  default-channel image or
+  `hamster-switch/<component>:<channel>-v<version>` channel image, rewrites
+  exactly one Compose service image, uses `--no-build`, waits for container
+  health, and restores its Compose backup if deployment fails.
 - Release IDs and patch versions are immutable after publication.
 - A corrected payload receives a new version; Release assets are never replaced
   in place.

@@ -8,6 +8,12 @@ on:
         required: true
         type: choice
         options: [sub2api, new-api]
+      channel:
+        description: Release channel
+        required: true
+        default: default
+        type: choice
+        options: [default, hamster]
       version:
         description: Patch version without v prefix
         required: true
@@ -28,19 +34,52 @@ jobs:
           cache: true
       - name: Build hamster-integrations CLI
         run: go build -trimpath -o /tmp/hamint ./cmd/hamster-integrations
+      - name: Resolve release channel
+        env:
+          COMPONENT: ${{ inputs.component }}
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -eu
+          case "$CHANNEL" in
+            default)
+              RELEASE_DIR="releases/${COMPONENT}/${VERSION}"
+              RELEASE_NAME="$COMPONENT"
+              SOURCE_TAG="${COMPONENT}-v${VERSION}"
+              IMAGE_TAG="hs-v${VERSION}"
+              INSTALLER_CHANNEL=""
+              ;;
+            hamster)
+              RELEASE_DIR="releases/${COMPONENT}/${CHANNEL}/${VERSION}"
+              RELEASE_NAME="${COMPONENT}-${CHANNEL}"
+              SOURCE_TAG="${RELEASE_NAME}-v${VERSION}"
+              IMAGE_TAG="${CHANNEL}-v${VERSION}"
+              INSTALLER_CHANNEL="$CHANNEL"
+              ;;
+            *)
+              echo "Unsupported release channel: $CHANNEL" >&2
+              exit 1
+              ;;
+          esac
+          test -f "${RELEASE_DIR}/manifest.template.json"
+          echo "RELEASE_DIR=${RELEASE_DIR}" >> "$GITHUB_ENV"
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> "$GITHUB_ENV"
+          echo "SOURCE_TAG=${SOURCE_TAG}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "INSTALLER_CHANNEL=${INSTALLER_CHANNEL}" >> "$GITHUB_ENV"
       - name: Clone upstream at pinned commit and apply signed patch
         env:
           HAMSTER_INTEGRATIONS_STATE_DIR: /tmp/hamster-int-state
         run: |
           set -eu
           mkdir -p /tmp/hamster-int-state
-          REPO=$(python3 -c "import json;d=json.load(open('releases/${{ inputs.component }}/${{ inputs.version }}/manifest.template.json'));print(d['upstream']['repository'])")
-          COMMIT=$(python3 -c "import json;d=json.load(open('releases/${{ inputs.component }}/${{ inputs.version }}/manifest.template.json'));print(d['upstream']['commit'])")
+          REPO=$(python3 -c "import json;d=json.load(open('${RELEASE_DIR}/manifest.template.json'));print(d['upstream']['repository'])")
+          COMMIT=$(python3 -c "import json;d=json.load(open('${RELEASE_DIR}/manifest.template.json'));print(d['upstream']['commit'])")
           git clone "$REPO" /tmp/upstream
           git -C /tmp/upstream checkout "$COMMIT"
           /tmp/hamint update ${{ inputs.component }} \
             --target /tmp/upstream \
-            --release "${{ inputs.component }}-v${{ inputs.version }}" \
+            --release "$SOURCE_TAG" \
             --mode manual \
             --yes
       - name: Build image and prepare verified installer assets
@@ -49,13 +88,17 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -eu
-          IMAGE="hamster-switch/${COMPONENT}:hs-v${VERSION}"
-          ASSET="${COMPONENT}-image-v${VERSION}.tar.gz"
-          INSTALLER="install-${COMPONENT}-v${VERSION}.sh"
-          docker build -t "$IMAGE" /tmp/upstream
+          IMAGE="hamster-switch/${COMPONENT}:${IMAGE_TAG}"
+          ASSET="${RELEASE_NAME}-image-v${VERSION}.tar.gz"
+          INSTALLER="install-${RELEASE_NAME}-v${VERSION}.sh"
+          docker build \
+            --build-arg GOPROXY=https://proxy.golang.org,direct \
+            --build-arg GOSUMDB=sum.golang.org \
+            -t "$IMAGE" /tmp/upstream
           docker save "$IMAGE" | gzip > "/tmp/${ASSET}"
           sed \
             -e "s/__COMPONENT__/${COMPONENT}/g" \
+            -e "s/__CHANNEL__/${INSTALLER_CHANNEL}/g" \
             -e "s/__VERSION__/${VERSION}/g" \
             scripts/install-prebuilt-image.sh > "/tmp/${INSTALLER}"
           chmod 0755 "/tmp/${INSTALLER}"
@@ -70,9 +113,9 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -eu
-          ASSET="${COMPONENT}-image-v${VERSION}.tar.gz"
-          INSTALLER="install-${COMPONENT}-v${VERSION}.sh"
-          TAG="image-${COMPONENT}-v${VERSION}"
+          ASSET="${RELEASE_NAME}-image-v${VERSION}.tar.gz"
+          INSTALLER="install-${RELEASE_NAME}-v${VERSION}.sh"
+          TAG="image-${RELEASE_NAME}-v${VERSION}"
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $TAG already exists; published assets are immutable." >&2
             exit 1
@@ -82,6 +125,6 @@ jobs:
             "/tmp/${INSTALLER}" \
             /tmp/SHA256SUMS \
             --title "$TAG" \
-            --notes "Prebuilt patched image and verified installer for ${COMPONENT} v${VERSION}" \
+            --notes "Prebuilt patched image and verified installer for ${RELEASE_NAME} v${VERSION}" \
             -R "$GITHUB_REPOSITORY"
           echo "ASSET_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET" >> "$GITHUB_STEP_SUMMARY"
