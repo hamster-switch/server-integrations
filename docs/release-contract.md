@@ -85,6 +85,11 @@ in a Release asset.
   `hamster-switch/<component>:<channel>-v<version>` channel image, rewrites
   exactly one Compose service image, uses `--no-build`, waits for container
   health, and restores its Compose backup if deployment fails.
+- Automatic detection may match the component's Compose service, exact
+  container name, or a custom image name containing the component. Once a
+  container is selected, the verified image is applied to the exact Compose
+  service and project paths reported by Docker labels. Ambiguous detection is
+  rejected; administrators can provide both `--compose-file` and `--service`.
 - Release IDs and patch versions are immutable after publication.
 - A corrected payload receives a new version; Release assets are never replaced
   in place.

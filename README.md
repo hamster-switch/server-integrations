@@ -6,12 +6,14 @@ integrations maintained for sub2api and new-api.
 ## sub2api Hamster patch
 
 The independently versioned `sub2api-hamster` channel adds Hamster Switch
-subscription management to sub2api. Version `1.0.0` includes editable provider
+subscription management to sub2api. Version `1.0.1` includes editable provider
 icons and pricing multipliers (including a visible multiplier of `1`), strict
 `settings_config` JSON handling, editable fields prefilled with their current
 defaults, refreshed YAML provider discovery, and localized subscription
-navigation. The historical `sub2api-v1.0.x` channel remains available but is
-not replaced by this channel.
+navigation. Version `1.0.1` also fixes prebuilt installation discovery for
+custom images, renamed Compose services, and stopped containers in common
+Linux deployment paths. The historical `sub2api-v1.0.x` channel remains
+available but is not replaced by this channel.
 
 The updater consumes **formal GitHub Releases only**. Every release manifest is
 signed with this repository's Ed25519 key and every downloaded asset is checked
@@ -24,7 +26,7 @@ upstream source trees are diagnostic-only: there is intentionally no force flag.
 hamster-integrations inspect sub2api --target /srv/sub2api
 hamster-integrations check sub2api --target /srv/sub2api
 hamster-integrations update sub2api --target /srv/sub2api --mode manual
-hamster-integrations update sub2api --target /srv/sub2api --mode manual --release sub2api-hamster-v1.0.0
+hamster-integrations update sub2api --target /srv/sub2api --mode manual --release sub2api-hamster-v1.0.1
 hamster-integrations rollback sub2api --target /srv/sub2api
 ```
 
@@ -41,17 +43,37 @@ and `SHA256SUMS`. The installer verifies the image before `docker load`, changes
 only the selected Compose service image, recreates that service with
 `--no-build`, waits for health, and restores the Compose backup on failure.
 
-The following one-line command installs `sub2api-hamster` v1.0.0. It loads a
+The following one-line command installs `sub2api-hamster` v1.0.1. It loads a
 prebuilt image, so the target server does not run `pnpm`, `go build`, or a local
 Docker build:
 
 ```bash
-tmp=$(mktemp -d) && cd "$tmp" && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-hamster-v1.0.0/install-sub2api-hamster-v1.0.0.sh && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-hamster-v1.0.0/SHA256SUMS && sha256sum -c SHA256SUMS --ignore-missing && sudo bash install-sub2api-hamster-v1.0.0.sh
+tmp=$(mktemp -d) && cd "$tmp" && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-hamster-v1.0.1/install-sub2api-hamster-v1.0.1.sh && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-hamster-v1.0.1/SHA256SUMS && sha256sum -c SHA256SUMS --ignore-missing && sudo bash install-sub2api-hamster-v1.0.1.sh
 ```
 
-Use `--target /absolute/path` when the deployment is elsewhere. The target must
-already contain `deploy/docker-compose.yml`, `docker-compose.yml`, or
-`compose.yml`; persistent database and Redis volumes are not modified.
+The installer supports existing Docker Compose deployments. It detects the
+running sub2api container even when a custom theme changes its image or Compose
+service name, and reads the project path from Docker's Compose labels. It does
+not assume `/srv/sub2api`. Persistent database and Redis volumes are not
+modified.
+
+If more than one candidate exists, or the container is stopped, list the
+Compose metadata:
+
+```bash
+sudo docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Label "com.docker.compose.service"}}\t{{.Label "com.docker.compose.project.working_dir"}}\t{{.Label "com.docker.compose.project.config_files"}}'
+```
+
+Then rerun the downloaded installer with the reported absolute Compose file
+and service name:
+
+```bash
+sudo bash install-sub2api-hamster-v1.0.1.sh --compose-file /absolute/path/to/docker-compose.yml --service sub2api
+```
+
+For a relative `config_files` label, resolve it below the reported
+`project.working_dir`. Deployments started with plain `docker run` or systemd
+do not have Compose metadata and are not modified by the image installer.
 
 ## Release trust root
 
