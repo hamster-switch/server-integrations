@@ -65,6 +65,14 @@ sudo bash install-sub2api-hamster-v1.0.2.sh --mode systemd --systemd-service cus
 
 The systemd binary currently supports Linux x86_64 (`amd64`).
 
+The public prebuilt binary is compiled from the exact upstream commit recorded
+in the signed source Release. Use it only when the installation keeps that
+upstream migration history. A private fork or theme that changed an already
+applied migration must build its own binary from the patched fork on a build
+machine; do not edit `schema_migrations` checksums to force the public binary to
+start. The installer restores the previous binary if startup detects this kind
+of incompatibility.
+
 ### Docker Compose deployments
 
 When no `sub2api.service` is loaded, the installer detects the running sub2api
