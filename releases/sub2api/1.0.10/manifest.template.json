@@ -1,0 +1,566 @@
+{
+  "schema_version": 1,
+  "release_id": "sub2api-v1.0.10",
+  "component": "sub2api",
+  "patch_version": "1.0.10",
+  "min_cli_version": "0.3.1",
+  "published_at": "2026-07-23T02:30:00Z",
+  "upstream": {
+    "repository": "https://github.com/Wei-Shaw/sub2api",
+    "ref": "c275422251e72750bebe53e41fcf59db7f83fe6b",
+    "commit": "c275422251e72750bebe53e41fcf59db7f83fe6b",
+    "files": [
+      {
+        "path": "backend/internal/service/api_key_service.go",
+        "sha256": "3c183893ccda69b0455bc4c8144b208a984baf23ada5eb7d5faad782b2078d6b"
+      },
+      {
+        "path": "backend/internal/service/wire.go",
+        "sha256": "b3fdb616ffbdc6a8449155e67439c6e116454267c95c852b56e9d6967999748e"
+      },
+      {
+        "path": "backend/cmd/server/wire_gen.go",
+        "sha256": "7c8711b1dbc885fea29418b6fa901cd41f085c61c59b925d3f10b30b5feb2dc3"
+      },
+      {
+        "path": "backend/internal/server/routes/user.go",
+        "sha256": "29a8d7266d1f8299680150ebbe1e72be48533b87583d0b080efc55f73ad51808"
+      },
+      {
+        "path": "backend/internal/server/router.go",
+        "sha256": "c958d7a086021ca0eaec53dfc322ab4c293e1cbb16b119eb274c8ccaeaf884c8"
+      },
+      {
+        "path": "frontend/src/router/index.ts",
+        "sha256": "80222a1ba9669d38d220e8bbd1753d3e926277a52c5a4e8c486e81a599bbf78c"
+      },
+      {
+        "path": "frontend/src/components/layout/AppSidebar.vue",
+        "sha256": "d52e4d528b74b31518a617ee23621a81f93f5feaf88e8c20cdba0ad6b40fb442"
+      },
+      {
+        "path": "backend/internal/handler/api_key_handler.go",
+        "sha256": "0917b695c680a846edb28b7ed162e281907ff64d217e6cc0b83609ac227a8e8f"
+      },
+      {
+        "path": "backend/internal/repository/api_key_repo.go",
+        "sha256": "6880b8d8d8f6709ba61132bb41bf4acc7ad1db2bb48f4dcd9fa256e56b6fce56"
+      },
+      {
+        "path": "backend/internal/service/api_key.go",
+        "sha256": "a1abf5db6a30a280ddcb09e79d2ddbaf9e6de62c55d000f4ba867eba72c49df6"
+      },
+      {
+        "path": "backend/internal/service/domain_constants.go",
+        "sha256": "d192243cce8277342211c865c7785219996702875f0d7f288d35c0b7d134863d"
+      },
+      {
+        "path": "backend/internal/hamsteryaml/adapter.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/adapter_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/subscription.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/subscription_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/template.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/template_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_subscription.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_subscription_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_template.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_tutorial.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamstertutorial/content.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamstertutorial/content_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/handler/hamstertutorial/image_cache.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/service/config_subscription_service.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/service/config_subscription_service_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/migrations/154_hamster_switch_config_subscriptions.sql",
+        "absent": true
+      },
+      {
+        "path": "backend/ent/schema/hamster_config.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/presentation.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/presentation_test.go",
+        "absent": true
+      },
+      {
+        "path": "backend/migrations/155_hamster_subscription_management_v2.sql",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/api/__tests__/hamsterSwitchSubscriptions.spec.ts",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/api/hamsterSwitchSubscriptions.ts",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/settings_config.go",
+        "absent": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/settings_config_test.go",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/i18n/locales/en.ts",
+        "sha256": "5190560992498a65bae928d82e2656b73692949480e9179cec7cb4e8628afee5"
+      },
+      {
+        "path": "frontend/src/i18n/locales/zh.ts",
+        "sha256": "aebcc26124cd36911869a692062df6eec5abf9ece947638314e153078abb3115"
+      },
+      {
+        "path": "frontend/src/i18n/__tests__/subscriptionManagement.spec.ts",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/utils/hamsterSwitchSettings.ts",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/utils/__tests__/hamsterSwitchSettings.spec.ts",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/views/user/SubscriptionManagementView.vue",
+        "absent": true
+      },
+      {
+        "path": "frontend/src/views/user/__tests__/SubscriptionManagementTemplateEditor.spec.ts",
+        "absent": true
+      },
+      {
+        "path": "examples/hamster-switch/minimal.yaml",
+        "absent": true
+      }
+    ],
+    "anchors": [
+      {
+        "path": "backend/internal/service/api_key_service.go",
+        "contains": "type APIKeyService struct {"
+      },
+      {
+        "path": "backend/internal/service/wire.go",
+        "contains": "func ProvideAPIKeyService("
+      },
+      {
+        "path": "backend/cmd/server/wire_gen.go",
+        "contains": "service.ProvideAPIKeyService("
+      },
+      {
+        "path": "backend/internal/server/routes/user.go",
+        "contains": "keys.POST(\"\", h.APIKey.Create)"
+      },
+      {
+        "path": "backend/internal/server/router.go",
+        "contains": "routes.RegisterCommonRoutes(r)"
+      },
+      {
+        "path": "frontend/src/router/index.ts",
+        "contains": "path: '/keys'"
+      },
+      {
+        "path": "frontend/src/components/layout/AppSidebar.vue",
+        "contains": "path: '/keys'"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "name": "sub2api-patch-1.0.10.tar.gz",
+      "sha256": "4df34bde47f9f198b344534138068885bb86cf077c07c081e3c1f70f65561e62",
+      "media_type": "application/gzip"
+    }
+  ],
+  "patch": {
+    "bundle_asset": "sub2api-patch-1.0.10.tar.gz",
+    "files": [
+      {
+        "path": "backend/internal/service/api_key_service.go",
+        "bundle_path": "payload/backend/internal/service/api_key_service.go",
+        "source_sha256": "3c183893ccda69b0455bc4c8144b208a984baf23ada5eb7d5faad782b2078d6b",
+        "result_sha256": "be318ac71a6edf43413aa3e9f9a8a2436a81484f5252ccfe162d66975fcb577b"
+      },
+      {
+        "path": "backend/internal/service/wire.go",
+        "bundle_path": "payload/backend/internal/service/wire.go",
+        "source_sha256": "b3fdb616ffbdc6a8449155e67439c6e116454267c95c852b56e9d6967999748e",
+        "result_sha256": "014cd4321abbd67df5b9b2095cbf0c10a0b80e950bd6ddb14d19886518085b16"
+      },
+      {
+        "path": "backend/cmd/server/wire_gen.go",
+        "bundle_path": "payload/backend/cmd/server/wire_gen.go",
+        "source_sha256": "7c8711b1dbc885fea29418b6fa901cd41f085c61c59b925d3f10b30b5feb2dc3",
+        "result_sha256": "b7fa9aaef6f9e5e43e0355f9d7a7c07ee43fd9425e7c21a436caee131e559bd8"
+      },
+      {
+        "path": "backend/internal/server/routes/user.go",
+        "bundle_path": "payload/backend/internal/server/routes/user.go",
+        "source_sha256": "29a8d7266d1f8299680150ebbe1e72be48533b87583d0b080efc55f73ad51808",
+        "result_sha256": "f334e6ba340f36f27522c06b977a5c6f07ee51da8a637ba2bce2c508e0421b94"
+      },
+      {
+        "path": "backend/internal/server/router.go",
+        "bundle_path": "payload/backend/internal/server/router.go",
+        "source_sha256": "c958d7a086021ca0eaec53dfc322ab4c293e1cbb16b119eb274c8ccaeaf884c8",
+        "result_sha256": "8bf9643015e9176f1f30c80e094c00b6d180298629cfe4c83b8ecd712e10838d"
+      },
+      {
+        "path": "frontend/src/router/index.ts",
+        "bundle_path": "payload/frontend/src/router/index.ts",
+        "source_sha256": "80222a1ba9669d38d220e8bbd1753d3e926277a52c5a4e8c486e81a599bbf78c",
+        "result_sha256": "cb0c1f4a2ec8082a490e60ce229962fa579373847f779e304a7916faa37b3c9d"
+      },
+      {
+        "path": "frontend/src/components/layout/AppSidebar.vue",
+        "bundle_path": "payload/frontend/src/components/layout/AppSidebar.vue",
+        "source_sha256": "d52e4d528b74b31518a617ee23621a81f93f5feaf88e8c20cdba0ad6b40fb442",
+        "result_sha256": "49e8c923f5c46c5aa4ea237a4b75f0eaa6fbea2379a628dda7c9609b2553d262"
+      },
+      {
+        "path": "backend/internal/handler/api_key_handler.go",
+        "bundle_path": "payload/backend/internal/handler/api_key_handler.go",
+        "source_sha256": "0917b695c680a846edb28b7ed162e281907ff64d217e6cc0b83609ac227a8e8f",
+        "result_sha256": "0011ef75032d4b6c00baf79de81c267dfadf74be37e1ac9fea4174f4d380967f"
+      },
+      {
+        "path": "backend/internal/repository/api_key_repo.go",
+        "bundle_path": "payload/backend/internal/repository/api_key_repo.go",
+        "source_sha256": "6880b8d8d8f6709ba61132bb41bf4acc7ad1db2bb48f4dcd9fa256e56b6fce56",
+        "result_sha256": "c09d08482add83a2af15d0b9e71146a3bda8d08fa4f109d9999059c3f9632c1d"
+      },
+      {
+        "path": "backend/internal/service/api_key.go",
+        "bundle_path": "payload/backend/internal/service/api_key.go",
+        "source_sha256": "a1abf5db6a30a280ddcb09e79d2ddbaf9e6de62c55d000f4ba867eba72c49df6",
+        "result_sha256": "698f90f52acc8e038d561c8c3d3e27e7fb3b9eaa054f8d7a798c227a7df5e2b0"
+      },
+      {
+        "path": "backend/internal/service/domain_constants.go",
+        "bundle_path": "payload/backend/internal/service/domain_constants.go",
+        "source_sha256": "d192243cce8277342211c865c7785219996702875f0d7f288d35c0b7d134863d",
+        "result_sha256": "97510cb835994f184e19554c626e289455f5de65ba905d30619ba2cec00c54bc"
+      },
+      {
+        "path": "backend/internal/hamsteryaml/adapter.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/adapter.go",
+        "result_sha256": "0290164ff71349cdd72a72bada391990f880bc709ab181b3ab9113a46dbd23b7",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/adapter_test.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/adapter_test.go",
+        "result_sha256": "3f4764287c09b51797d01145912296735d6953be28c94ed8fa1c49625b68902e",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/subscription.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/subscription.go",
+        "result_sha256": "e3a5878fe6809a71cd4434b21170ab4dda6ae71c3887c823f5955d37cc18d8ea",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/subscription_test.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/subscription_test.go",
+        "result_sha256": "ff9a24ecc7ad00dfba98f5a9e31cda8995080ee6743abebe3c6be106b9272810",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/template.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/template.go",
+        "result_sha256": "e6a8c593dd69ecae565015cc39c07fdc413b5cf771a534f761de16ba6ba99c20",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/template_test.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/template_test.go",
+        "result_sha256": "dfc177a30a9de3dd66a2f7547c9f61125767542a482d9365a64161fa3ab22aa7",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_subscription.go",
+        "bundle_path": "payload/backend/internal/handler/hamster_switch_subscription.go",
+        "result_sha256": "99d605a1068dd0758ebc909fb2813a9c560cff0676b3ecf3c2f0c757c78c4739",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_subscription_test.go",
+        "bundle_path": "payload/backend/internal/handler/hamster_switch_subscription_test.go",
+        "result_sha256": "6c4ae01a1cb88b85e7250ea2e879010b03c47717d411fa97eb5ac7f9e06e83f8",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_template.go",
+        "bundle_path": "payload/backend/internal/handler/hamster_switch_template.go",
+        "result_sha256": "782d7353986cf2c9ffb630d83dc9be389894454f12f2d9a04ad9310e85ff3cc2",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamster_switch_tutorial.go",
+        "bundle_path": "payload/backend/internal/handler/hamster_switch_tutorial.go",
+        "result_sha256": "974d16fd355571bb032fc3d47342454f6f125e00c59d7652dee81b040ec369b8",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamstertutorial/content.go",
+        "bundle_path": "payload/backend/internal/handler/hamstertutorial/content.go",
+        "result_sha256": "821985be6acfd8fc94b988c77f56e232fc5f2c135580d291665373892f2cec89",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamstertutorial/content_test.go",
+        "bundle_path": "payload/backend/internal/handler/hamstertutorial/content_test.go",
+        "result_sha256": "2520e2e412244d7deb73317e5a2b76b652c7e5925cc9f2aeaa9ed70fe381b5f9",
+        "create": true
+      },
+      {
+        "path": "backend/internal/handler/hamstertutorial/image_cache.go",
+        "bundle_path": "payload/backend/internal/handler/hamstertutorial/image_cache.go",
+        "result_sha256": "17e6d6256590041511709d78ca068d38841cb37e695f54844817d6d162335fc8",
+        "create": true
+      },
+      {
+        "path": "backend/internal/service/config_subscription_service.go",
+        "bundle_path": "payload/backend/internal/service/config_subscription_service.go",
+        "result_sha256": "6703cca13b921d2c4a8ffc718fe3ddc3f3a5d3cc0599e0c785657d2acea70733",
+        "create": true
+      },
+      {
+        "path": "backend/internal/service/config_subscription_service_test.go",
+        "bundle_path": "payload/backend/internal/service/config_subscription_service_test.go",
+        "result_sha256": "5cfec97f8b6b944b7ebfadc05285bb44e7966f33c9f77f508bc2d37f9444810d",
+        "create": true
+      },
+      {
+        "path": "backend/migrations/154_hamster_switch_config_subscriptions.sql",
+        "bundle_path": "payload/backend/migrations/154_hamster_switch_config_subscriptions.sql",
+        "result_sha256": "98b0cd261a12a62726bf21b62b66d4da6a6d78306ee5188b71c4631e3c866d9c",
+        "create": true
+      },
+      {
+        "path": "backend/ent/schema/hamster_config.go",
+        "bundle_path": "payload/backend/ent/schema/hamster_config.go",
+        "result_sha256": "58df1732fa0d37b84aacbe1799ad4d301e32b761a02492cd93cb022040614f90",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/presentation.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/presentation.go",
+        "result_sha256": "05776f0eb7e8a09a657b1f5219127a9096421cb5a1a2b518617e0b8999db6fe3",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/presentation_test.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/presentation_test.go",
+        "result_sha256": "a6fac2d3fac0bdb2eb87588580cc1cce2f0221a1f3762ac5977365344af30a0d",
+        "create": true
+      },
+      {
+        "path": "backend/migrations/155_hamster_subscription_management_v2.sql",
+        "bundle_path": "payload/backend/migrations/155_hamster_subscription_management_v2.sql",
+        "result_sha256": "fa4e20a333a29810002fee76b267ef3b81db75f8bd83494eba730eaf66e2dca3",
+        "create": true
+      },
+      {
+        "path": "frontend/src/api/__tests__/hamsterSwitchSubscriptions.spec.ts",
+        "bundle_path": "payload/frontend/src/api/__tests__/hamsterSwitchSubscriptions.spec.ts",
+        "result_sha256": "51768d9657f33a31c1b9cbc68e422fba25a77dcda2633e5e1d2611dbe37bc106",
+        "create": true
+      },
+      {
+        "path": "frontend/src/api/hamsterSwitchSubscriptions.ts",
+        "bundle_path": "payload/frontend/src/api/hamsterSwitchSubscriptions.ts",
+        "result_sha256": "7bde470011fb137423b77ac4d05aaff92092f36c29dccaec86308486862c3dc8",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/settings_config.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/settings_config.go",
+        "result_sha256": "ab8afb74ed92be60735d00c07ea2ab66720a8d706c997bcabfe560f97f1e99e3",
+        "create": true
+      },
+      {
+        "path": "backend/internal/hamsteryaml/settings_config_test.go",
+        "bundle_path": "payload/backend/internal/hamsteryaml/settings_config_test.go",
+        "result_sha256": "f50115a1afd424aad4ad9993cc70397c21f0e7b37e888b735b87266bae3503de",
+        "create": true
+      },
+      {
+        "path": "frontend/src/i18n/locales/en.ts",
+        "bundle_path": "payload/frontend/src/i18n/locales/en.ts",
+        "source_sha256": "5190560992498a65bae928d82e2656b73692949480e9179cec7cb4e8628afee5",
+        "result_sha256": "ed304209efd1399474fe51f849ecb50e05d8fe93f992eb904b7c1b87c2ea1029"
+      },
+      {
+        "path": "frontend/src/i18n/locales/zh.ts",
+        "bundle_path": "payload/frontend/src/i18n/locales/zh.ts",
+        "source_sha256": "aebcc26124cd36911869a692062df6eec5abf9ece947638314e153078abb3115",
+        "result_sha256": "a301b96318a6bcb6a7a464110770faab35266a337ca2871c8187fa5d2c1b99a9"
+      },
+      {
+        "path": "frontend/src/i18n/__tests__/subscriptionManagement.spec.ts",
+        "bundle_path": "payload/frontend/src/i18n/__tests__/subscriptionManagement.spec.ts",
+        "result_sha256": "bbf71b5ebf78d4984d6d7a797932e5901383a2b0d691d8d815b691233d0f2cc7",
+        "create": true
+      },
+      {
+        "path": "frontend/src/utils/hamsterSwitchSettings.ts",
+        "bundle_path": "payload/frontend/src/utils/hamsterSwitchSettings.ts",
+        "result_sha256": "9daae37bf12888a5124894dbb8de59b890ca8ab3e295f9315721199c8f8c5673",
+        "create": true
+      },
+      {
+        "path": "frontend/src/utils/__tests__/hamsterSwitchSettings.spec.ts",
+        "bundle_path": "payload/frontend/src/utils/__tests__/hamsterSwitchSettings.spec.ts",
+        "result_sha256": "a84e6bf12b10e7e6f2eb87903f6bcbd3820e64f2a72c4a4c5cfa83e8885d9269",
+        "create": true
+      },
+      {
+        "path": "frontend/src/views/user/SubscriptionManagementView.vue",
+        "bundle_path": "payload/frontend/src/views/user/SubscriptionManagementView.vue",
+        "result_sha256": "6551aaaa3e090c12fc0255f502665d73e6ca62d67d7d7f04bebddaa73905e738",
+        "create": true
+      },
+      {
+        "path": "frontend/src/views/user/__tests__/SubscriptionManagementTemplateEditor.spec.ts",
+        "bundle_path": "payload/frontend/src/views/user/__tests__/SubscriptionManagementTemplateEditor.spec.ts",
+        "result_sha256": "19504dccdac5b63268565482ac4a4eba7c2bcf405ddff508561a100d3684d5f3",
+        "create": true
+      },
+      {
+        "path": "examples/hamster-switch/minimal.yaml",
+        "bundle_path": "payload/examples/hamster-switch/minimal.yaml",
+        "result_sha256": "53930492b2a697646eca940f2e49884325d50c62c3d0fd69115ba0a11d6a7ea9",
+        "create": true
+      }
+    ]
+  },
+  "deployment": {
+    "allowed_modes": [
+      "manual",
+      "systemd"
+    ],
+    "build_steps": [
+      {
+        "kind": "pnpm-install",
+        "workdir": "frontend"
+      },
+      {
+        "kind": "pnpm-build",
+        "workdir": "frontend"
+      },
+      {
+        "kind": "go-build-server",
+        "workdir": "backend"
+      }
+    ],
+    "systemd": {
+      "service": "sub2api"
+    },
+    "health": {
+      "url": "http://127.0.0.1:8080/health",
+      "timeout_seconds": 30
+    },
+    "manual_steps": [
+      "在 frontend 运行 pnpm install --frozen-lockfile \u0026\u0026 pnpm build",
+      "在 backend 运行 go test ./internal/hamsteryaml ./internal/handler/hamstertutorial ./internal/service ./internal/handler ./internal/server/routes",
+      "在 backend 运行 go build -o ../sub2api ./cmd/server",
+      "按本站部署方式重启 sub2api，并检查 /health"
+    ]
+  },
+  "impact_notes": [
+    {
+      "kind": "breaking",
+      "message": "旧 hs_ 签名 URL 和无 /api 兼容 URL 立即失效；升级不会静默删除旧开发期 API Key。"
+    },
+    {
+      "kind": "database",
+      "message": "新增配置订阅、YAML 模板版本、教程覆盖/候选和图片元数据表。"
+    },
+    {
+      "kind": "security",
+      "message": "教程更新只读取独立签名信任根的正式 Release；外链图片由服务器执行 SSRF 防护和内容校验后缓存。"
+    },
+    {
+      "kind": "content",
+      "message": "通用教程正文后续由维护者发布；站点覆盖内容和冲突处理不会被自动覆盖。"
+    },
+    {
+      "kind": "security",
+      "message": "普通用户不再通过登录态管理接口查看原始 YAML；管理员预览保留审计日志，公共 hsc_ 订阅 URL 保持可用。"
+    },
+    {
+      "kind": "database",
+      "message": "模板草稿与版本新增 presentation JSON，并新增隐藏订阅专用 API 密钥的站点设置和查询索引。"
+    },
+    {
+      "kind": "content",
+      "message": "订阅模板管理页升级为中英文、主题自适应的订阅配置与分组配置界面；字段聚焦后会填入动态默认值，方便直接修改。"
+    },
+    {
+      "kind": "content",
+      "message": "Provider 结构化配置与当前 YAML token 对齐，settings_config 支持安全 JSON 编辑，预览和订阅下载严格转义内联 JSON。"
+    },
+    {
+      "kind": "fix",
+      "message": "Provider 仅开放 name、description、icon、base_url、pricing、settings_config；base_url 与 settings_config 中的请求端点双向同步。"
+    },
+    {
+      "kind": "fix",
+      "message": "缺少模型映射的分组在模板预览中静默跳过，不再显示 GROUP_PREVIEW_SKIPPED 诊断。"
+    },
+    {
+      "kind": "fix",
+      "message": "模板分组 pricing 默认读取 groups.rate_multiplier，并提供可编辑的 pricing.multiplier；旧 pricing 覆盖会保留默认倍率。"
+    }
+  ]
+}
