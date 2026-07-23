@@ -95,6 +95,10 @@ in a Release asset.
   `ExecStart`, preserves owner and mode, keeps a timestamped backup, atomically
   replaces the binary, checks service state and HTTP health, and restores the
   previous binary on failure. It never rewrites the unit or environment file.
+- A prebuilt systemd binary is compatible only with the upstream source and
+  immutable migration history pinned by its signed source Release. Forks that
+  changed an applied migration require a fork-built binary; installers and
+  operators must not rewrite migration checksums to bypass startup validation.
 - Release IDs and patch versions are immutable after publication.
 - A corrected payload receives a new version; Release assets are never replaced
   in place.
