@@ -33,6 +33,24 @@ The component fixes the upstream repository (`Wei-Shaw/sub2api` or
 `release_id` must both equal `<component>-v<patch_version>`. A stable
 `min_cli_version` newer than the running CLI is also a hard stop.
 
+## Stored defaults and reactive editor compatibility
+
+When a patch changes a persisted built-in template or draft, it must include an
+exact-value migration for the old built-in value and a runtime compatibility
+fallback for installations where migrations have not run yet. Both paths must
+leave every customized value unchanged, and a contract test must keep the SQL
+and runtime template constants identical.
+
+Editors that derive controls from template metadata must be tested with legacy
+missing, `null`, and blank presentation fields. Dynamic keys added after mount
+must use framework-reactive membership checks, and mounted interaction tests
+must focus each affected control and assert that its editable default appears.
+
+Structured configuration remains an object at the API boundary. Escaped quotes
+and newlines inside a JSON string are valid JSON encoding, not evidence of
+double encoding. Regression tests must parse the editor value with a strict
+JSON parser and parse the rendered YAML back to the expected object shape.
+
 ## Key rotation
 
 A public-key change requires a reviewed CLI source release signed by the old
