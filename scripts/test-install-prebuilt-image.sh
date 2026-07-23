@@ -88,11 +88,11 @@ echo "$*" >>"${DOCKER_LOG}"
 if [[ "$*" == "compose version" ]]; then
   exit 0
 fi
-if [[ "$*" == "ps --format {{.ID}}|{{.Image}}|{{.Label \"com.docker.compose.service\"}}" ]]; then
+if [[ "$*" == "ps --format {{.ID}}|{{.Image}}|{{.Names}}|{{.Label \"com.docker.compose.service\"}}" ]]; then
   if [[ "${MOCK_MULTIPLE_CONTAINERS:-0}" == "1" ]]; then
-    printf 'container-one|hamster-switch/sub2api:hs-v1.0.0|sub2api\ncontainer-two|hamster-switch/sub2api:hs-v1.0.0|sub2api\n'
+    printf 'container-one|hamster-switch/sub2api:hs-v1.0.0|sub2api-one|sub2api\ncontainer-two|hamster-switch/sub2api:hs-v1.0.0|sub2api-two|sub2api\n'
   elif [[ -n "${MOCK_COMPOSE_TARGET:-}" ]]; then
-    echo 'running-container-id|hamster-switch/sub2api:hs-v1.0.0|sub2api'
+    echo "running-container-id|${MOCK_IMAGE:-hamster-switch/sub2api:hs-v1.0.0}|${MOCK_CONTAINER_NAME:-sub2api}|${MOCK_SERVICE:-sub2api}"
   fi
   exit 0
 fi
@@ -106,6 +106,10 @@ if [[ "$*" == inspect*com.docker.compose.project* && "$*" != *config_files* && "
 fi
 if [[ "$*" == inspect*com.docker.compose.project.config_files* ]]; then
   echo "${MOCK_COMPOSE_TARGET}/deploy/docker-compose.yml"
+  exit 0
+fi
+if [[ "$*" == inspect*com.docker.compose.service* ]]; then
+  echo "${MOCK_SERVICE:-sub2api}"
   exit 0
 fi
 if [[ "$*" == "load" ]]; then
@@ -130,11 +134,13 @@ chmod 0755 "${fake_bin}"/*
 
 write_compose() {
   local target="$1"
+  local service="${2:-sub2api}"
+  local image="${3:-hamster-switch/sub2api:hs-v1.0.0}"
   mkdir -p "${target}/deploy"
-  cat >"${target}/deploy/docker-compose.yml" <<'EOF'
+  cat >"${target}/deploy/docker-compose.yml" <<EOF
 services:
-  sub2api:
-    image: hamster-switch/sub2api:hs-v1.0.0
+  ${service}:
+    image: ${image}
     restart: unless-stopped
   postgres:
     image: postgres:18-alpine
@@ -166,6 +172,44 @@ FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${hamster_log}" MOCK_HEALTH=healthy \
 grep -q 'image: hamster-switch/sub2api:hamster-v1.2.3' "${hamster_target}/deploy/docker-compose.yml"
 grep -q 'image: postgres:18-alpine' "${hamster_target}/deploy/docker-compose.yml"
 grep -q 'load' "${hamster_log}"
+
+themed_target="${test_root}/themed-success"
+themed_log="${test_root}/themed-success-docker.log"
+write_compose "${themed_target}" backend 'private/sub2api-themed:latest'
+FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${themed_log}" MOCK_HEALTH=healthy \
+  MOCK_COMPOSE_TARGET="${themed_target}" MOCK_SERVICE=backend \
+  MOCK_IMAGE='private/sub2api-themed:latest' MOCK_CONTAINER_NAME='custom-router' \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${hamster_installer}"
+
+grep -q 'image: hamster-switch/sub2api:hamster-v1.2.3' "${themed_target}/deploy/docker-compose.yml"
+grep -q 'image: postgres:18-alpine' "${themed_target}/deploy/docker-compose.yml"
+grep -q 'up -d --no-build backend' "${themed_log}"
+
+explicit_target="${test_root}/explicit-success"
+explicit_log="${test_root}/explicit-success-docker.log"
+write_compose "${explicit_target}" backend 'private/renamed-router:latest'
+FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${explicit_log}" MOCK_HEALTH=healthy \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${hamster_installer}" \
+    --compose-file "${explicit_target}/deploy/docker-compose.yml" \
+    --service backend
+
+grep -q 'image: hamster-switch/sub2api:hamster-v1.2.3' "${explicit_target}/deploy/docker-compose.yml"
+grep -q 'up -d --no-build backend' "${explicit_log}"
+
+stopped_target="${test_root}/stopped-success"
+stopped_log="${test_root}/stopped-success-docker.log"
+write_compose "${stopped_target}"
+(
+  cd "${stopped_target}"
+  FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${stopped_log}" MOCK_HEALTH=healthy \
+    PATH="${fake_bin}:${PATH}" \
+    bash "${hamster_installer}"
+)
+
+grep -q 'image: hamster-switch/sub2api:hamster-v1.2.3' "${stopped_target}/deploy/docker-compose.yml"
+grep -q 'up -d --no-build sub2api' "${stopped_log}"
 
 rollback_target="${test_root}/rollback"
 rollback_log="${test_root}/rollback-docker.log"

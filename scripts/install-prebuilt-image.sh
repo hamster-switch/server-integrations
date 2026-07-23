@@ -22,8 +22,10 @@ TARGET_DIR=""
 COMPOSE_FILE=""
 PROJECT_DIR=""
 PROJECT_NAME=""
+SERVICE_NAME=""
 TARGET_EXPLICIT=0
 COMPOSE_EXPLICIT=0
+SERVICE_EXPLICIT=0
 TEMP_DIR=""
 NEXT_COMPOSE=""
 BACKUP_FILE=""
@@ -31,11 +33,12 @@ COMPOSE_CHANGED=0
 
 usage() {
   cat <<EOF
-Usage: $0 [--target ABSOLUTE_PATH] [--compose-file ABSOLUTE_PATH]
+Usage: $0 [--target ABSOLUTE_PATH] [--compose-file ABSOLUTE_PATH] [--service NAME]
 
-Loads the verified ${IMAGE} image, switches only the ${COMPONENT} Compose
-service to that image, recreates it without building, and waits for health.
-With no arguments, the running Compose container is detected automatically.
+Loads the verified ${IMAGE} image, switches only the detected or selected
+Compose service to that image, recreates it without building, and waits for
+health. With no arguments, the running Compose container is detected
+automatically, including deployments that use a custom service or image name.
 EOF
 }
 
@@ -69,6 +72,12 @@ while [[ $# -gt 0 ]]; do
       COMPOSE_EXPLICIT=1
       shift 2
       ;;
+    --service)
+      [[ $# -ge 2 ]] || fail "--service requires a value"
+      SERVICE_NAME="$2"
+      SERVICE_EXPLICIT=1
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -78,6 +87,10 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "${SERVICE_EXPLICIT}" -eq 1 && ! "${SERVICE_NAME}" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+  fail "--service contains unsupported characters"
+fi
 
 [[ "$(id -u)" -eq 0 ]] || fail "run this installer as root (for example with sudo)"
 
@@ -103,13 +116,14 @@ fi
 
 if [[ "${TARGET_EXPLICIT}" -eq 0 && "${COMPOSE_EXPLICIT}" -eq 0 ]]; then
   mapfile -t compose_containers < <(
-    docker ps --format '{{.ID}}|{{.Image}}|{{.Label "com.docker.compose.service"}}' |
-      awk -F '|' -v component="${COMPONENT}" '
-        $3 == component || index($2, "hamster-switch/" component ":") == 1 { print $1 }
+    docker ps --format '{{.ID}}|{{.Image}}|{{.Names}}|{{.Label "com.docker.compose.service"}}' |
+      awk -F '|' -v component="${COMPONENT}" -v requested_service="${SERVICE_NAME}" '
+        $4 == component || (requested_service != "" && $4 == requested_service) ||
+        $3 == component || index($2, component) > 0 { print $1 }
       '
   )
   if [[ "${#compose_containers[@]}" -gt 1 ]]; then
-    fail "multiple running ${COMPONENT} Compose services found; use --compose-file to select one"
+    fail "multiple running ${COMPONENT} containers found; use --compose-file and --service to select one"
   fi
   if [[ "${#compose_containers[@]}" -eq 1 ]]; then
     container_id="${compose_containers[0]}"
@@ -117,9 +131,16 @@ if [[ "${TARGET_EXPLICIT}" -eq 0 && "${COMPOSE_EXPLICIT}" -eq 0 ]]; then
     TARGET_DIR="${PROJECT_DIR}"
     PROJECT_NAME="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "${container_id}")"
     compose_files="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}' "${container_id}")"
+    detected_service="$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.service" }}' "${container_id}")"
     [[ "${TARGET_DIR}" != "<no value>" ]] || TARGET_DIR=""
     [[ "${PROJECT_NAME}" != "<no value>" ]] || PROJECT_NAME=""
     [[ "${compose_files}" != "<no value>" ]] || compose_files=""
+    [[ "${detected_service}" != "<no value>" ]] || detected_service=""
+    [[ -n "${detected_service}" ]] || fail "the detected ${COMPONENT} container is not managed by Docker Compose"
+    if [[ "${SERVICE_EXPLICIT}" -eq 1 && "${SERVICE_NAME}" != "${detected_service}" ]]; then
+      fail "--service ${SERVICE_NAME} does not match detected Compose service ${detected_service}"
+    fi
+    SERVICE_NAME="${detected_service}"
     COMPOSE_FILE="${compose_files%%,*}"
     if [[ -n "${COMPOSE_FILE}" && "${COMPOSE_FILE}" != /* ]]; then
       COMPOSE_FILE="${TARGET_DIR}/${COMPOSE_FILE}"
@@ -127,18 +148,38 @@ if [[ "${TARGET_EXPLICIT}" -eq 0 && "${COMPOSE_EXPLICIT}" -eq 0 ]]; then
   fi
 fi
 
+if [[ -z "${SERVICE_NAME}" ]]; then
+  SERVICE_NAME="${COMPONENT}"
+fi
+
 if [[ -z "${TARGET_DIR}" ]]; then
-  for candidate in "${PWD}" "/srv/${COMPONENT}" "/opt/${COMPONENT}"; do
+  declare -A seen_compose_files=()
+  filesystem_matches=()
+  for candidate in \
+    "${PWD}" \
+    "/srv/${COMPONENT}" \
+    "/opt/${COMPONENT}" \
+    "/data/${COMPONENT}" \
+    "/var/lib/${COMPONENT}" \
+    "/root/${COMPONENT}" \
+    /home/*/"${COMPONENT}"; do
     if [[ -d "${candidate}" ]]; then
       for compose_candidate in "${candidate}/deploy/docker-compose.yml" "${candidate}/docker-compose.yml" "${candidate}/compose.yml" "${candidate}/compose.yaml"; do
-        if [[ -f "${compose_candidate}" ]] && grep -Eq "^[[:space:]]{2}${COMPONENT}:[[:space:]]*$" "${compose_candidate}"; then
-          TARGET_DIR="${candidate}"
-          COMPOSE_FILE="${compose_candidate}"
-          break 2
+        if [[ -f "${compose_candidate}" ]] && grep -Eq "^[[:space:]]{2}${SERVICE_NAME}:[[:space:]]*$" "${compose_candidate}"; then
+          if [[ -z "${seen_compose_files[${compose_candidate}]+x}" ]]; then
+            seen_compose_files["${compose_candidate}"]=1
+            filesystem_matches+=("${candidate}|${compose_candidate}")
+          fi
         fi
       done
     fi
   done
+  if [[ "${#filesystem_matches[@]}" -gt 1 ]]; then
+    fail "multiple ${COMPONENT} Compose projects found; use --compose-file and --service to select one"
+  fi
+  if [[ "${#filesystem_matches[@]}" -eq 1 ]]; then
+    IFS='|' read -r TARGET_DIR COMPOSE_FILE <<<"${filesystem_matches[0]}"
+  fi
 fi
 
 [[ -n "${TARGET_DIR}" ]] || fail "could not auto-detect the ${COMPONENT} Compose project; use --compose-file /absolute/path/to/compose.yml"
@@ -175,12 +216,13 @@ fi
 echo "Detected Compose project: ${TARGET_DIR}"
 echo "Using Compose file: ${COMPOSE_FILE}"
 echo "Using Compose working directory: ${PROJECT_DIR}"
+echo "Using Compose service: ${SERVICE_NAME}"
 if [[ -n "${PROJECT_NAME}" ]]; then
   echo "Using Compose project name: ${PROJECT_NAME}"
 fi
 
 rewrite_compose() {
-  awk -v service="${COMPONENT}" -v image="${IMAGE}" '
+  awk -v service="${SERVICE_NAME}" -v image="${IMAGE}" '
     BEGIN { in_service = 0; changed = 0 }
     $0 ~ ("^  " service ":[[:space:]]*$") {
       in_service = 1
@@ -208,7 +250,7 @@ rewrite_compose() {
 
 NEXT_COMPOSE="${COMPOSE_FILE}.hamster-switch.$$.tmp"
 if ! rewrite_compose >"${NEXT_COMPOSE}"; then
-  fail "expected exactly one image field in Compose service ${COMPONENT}"
+  fail "expected exactly one image field in Compose service ${SERVICE_NAME}"
 fi
 chmod --reference="${COMPOSE_FILE}" "${NEXT_COMPOSE}"
 chown --reference="${COMPOSE_FILE}" "${NEXT_COMPOSE}"
@@ -249,15 +291,15 @@ rollback_compose() {
     cp -p -- "${BACKUP_FILE}" "${COMPOSE_FILE}"
     (
       cd "${PROJECT_DIR}"
-      "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" up -d --no-build "${COMPONENT}"
+      "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" up -d --no-build "${SERVICE_NAME}"
     ) || echo "warning: failed to restart the previous image" >&2
   fi
 }
 
-echo "Recreating ${COMPONENT} without a local build..."
+echo "Recreating ${SERVICE_NAME} without a local build..."
 if ! (
   cd "${PROJECT_DIR}"
-  "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" up -d --no-build "${COMPONENT}"
+  "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" up -d --no-build "${SERVICE_NAME}"
 ); then
   rollback_compose
   fail "Docker Compose failed; the previous Compose file was restored"
@@ -265,11 +307,11 @@ fi
 
 container_id="$(
   cd "${PROJECT_DIR}"
-  "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" ps -q "${COMPONENT}"
+  "${COMPOSE_COMMAND[@]}" "${COMPOSE_ARGS[@]}" ps -q "${SERVICE_NAME}"
 )"
 if [[ -z "${container_id}" ]]; then
   rollback_compose
-  fail "Compose did not return a container for ${COMPONENT}"
+  fail "Compose did not return a container for ${SERVICE_NAME}"
 fi
 
 for _ in {1..60}; do
