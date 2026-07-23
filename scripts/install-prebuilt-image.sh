@@ -4,10 +4,18 @@ set -euo pipefail
 
 readonly REPOSITORY="hamster-switch/server-integrations"
 readonly COMPONENT="__COMPONENT__"
+readonly CHANNEL="__CHANNEL__"
 readonly VERSION="__VERSION__"
-readonly IMAGE="hamster-switch/${COMPONENT}:hs-v${VERSION}"
-readonly RELEASE_TAG="image-${COMPONENT}-v${VERSION}"
-readonly IMAGE_ASSET="${COMPONENT}-image-v${VERSION}.tar.gz"
+if [[ -n "${CHANNEL}" ]]; then
+  readonly RELEASE_NAME="${COMPONENT}-${CHANNEL}"
+  readonly IMAGE_TAG="${CHANNEL}-v${VERSION}"
+else
+  readonly RELEASE_NAME="${COMPONENT}"
+  readonly IMAGE_TAG="hs-v${VERSION}"
+fi
+readonly IMAGE="hamster-switch/${COMPONENT}:${IMAGE_TAG}"
+readonly RELEASE_TAG="image-${RELEASE_NAME}-v${VERSION}"
+readonly IMAGE_ASSET="${RELEASE_NAME}-image-v${VERSION}.tar.gz"
 readonly RELEASE_BASE_URL="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
 
 TARGET_DIR=""

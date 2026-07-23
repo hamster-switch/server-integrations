@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"strings"
 	"testing"
+
+	"github.com/hamster-switch/server-integrations/internal/contract"
 )
 
 func TestVerifyManifestRejectsWrongSignature(t *testing.T) {
@@ -18,6 +20,46 @@ func TestVerifyManifestRejectsWrongSignature(t *testing.T) {
 	_, err = VerifyManifest(body, []byte(signature))
 	if err == nil || !strings.Contains(err.Error(), "verification failed") {
 		t.Fatalf("expected signature failure, got %v", err)
+	}
+}
+
+func TestVerifyReleaseIdentitySupportsLegacyAndHamsterChannels(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		tag       string
+		component string
+		manifest  contract.Manifest
+		wantErr   bool
+	}{
+		{
+			name: "legacy",
+			tag:  "sub2api-v1.0.0", component: "sub2api",
+			manifest: contract.Manifest{Component: "sub2api", PatchVersion: "1.0.0", ReleaseID: "sub2api-v1.0.0"},
+		},
+		{
+			name: "hamster",
+			tag:  "sub2api-hamster-v1.0.0", component: "sub2api",
+			manifest: contract.Manifest{Component: "sub2api", Channel: "hamster", PatchVersion: "1.0.0", ReleaseID: "sub2api-hamster-v1.0.0"},
+		},
+		{
+			name: "wrong tag",
+			tag:  "sub2api-v1.0.0", component: "sub2api",
+			manifest: contract.Manifest{Component: "sub2api", Channel: "hamster", PatchVersion: "1.0.0", ReleaseID: "sub2api-hamster-v1.0.0"},
+			wantErr:  true,
+		},
+		{
+			name: "wrong component",
+			tag:  "sub2api-hamster-v1.0.0", component: "new-api",
+			manifest: contract.Manifest{Component: "sub2api", Channel: "hamster", PatchVersion: "1.0.0", ReleaseID: "sub2api-hamster-v1.0.0"},
+			wantErr:  true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := verifyReleaseIdentity(test.tag, test.manifest, test.component)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("verifyReleaseIdentity() = %v", err)
+			}
+		})
 	}
 }
 

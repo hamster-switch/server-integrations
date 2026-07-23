@@ -14,18 +14,33 @@ fi
 installer="${test_root}/install-sub2api-v1.2.3.sh"
 sed \
   -e 's/__COMPONENT__/sub2api/g' \
+  -e 's/__CHANNEL__//g' \
   -e 's/__VERSION__/1.2.3/g' \
   "${repo_root}/scripts/install-prebuilt-image.sh" >"${installer}"
 chmod 0755 "${installer}"
 bash -n "${installer}"
 
+hamster_installer="${test_root}/install-sub2api-hamster-v1.2.3.sh"
+sed \
+  -e 's/__COMPONENT__/sub2api/g' \
+  -e 's/__CHANNEL__/hamster/g' \
+  -e 's/__VERSION__/1.2.3/g' \
+  "${repo_root}/scripts/install-prebuilt-image.sh" >"${hamster_installer}"
+bash -n "${hamster_installer}"
+bash "${hamster_installer}" --help | grep -q 'hamster-switch/sub2api:hamster-v1.2.3'
+if grep -q '__CHANNEL__' "${hamster_installer}"; then
+  echo 'channel placeholder was not replaced' >&2
+  exit 1
+fi
+
 fixture_root="${test_root}/release"
 fake_bin="${test_root}/bin"
 mkdir -p "${fixture_root}" "${fake_bin}"
 printf 'fake docker image archive\n' | gzip >"${fixture_root}/sub2api-image-v1.2.3.tar.gz"
+printf 'fake hamster channel image archive\n' | gzip >"${fixture_root}/sub2api-hamster-image-v1.2.3.tar.gz"
 (
   cd "${fixture_root}"
-  sha256sum sub2api-image-v1.2.3.tar.gz >SHA256SUMS
+  sha256sum sub2api-image-v1.2.3.tar.gz sub2api-hamster-image-v1.2.3.tar.gz >SHA256SUMS
 )
 
 cat >"${fake_bin}/id" <<'EOF'
@@ -139,6 +154,18 @@ grep -q 'image: postgres:18-alpine' "${success_target}/deploy/docker-compose.yml
 grep -q 'load' "${success_log}"
 grep -q 'compose -p original-project-name -f .* up -d --no-build sub2api' "${success_log}"
 compgen -G "${success_target}/deploy/docker-compose.yml.hamster-switch.*.bak" >/dev/null
+
+hamster_target="${test_root}/hamster-success"
+hamster_log="${test_root}/hamster-success-docker.log"
+write_compose "${hamster_target}"
+FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${hamster_log}" MOCK_HEALTH=healthy \
+  MOCK_COMPOSE_TARGET="${hamster_target}" \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${hamster_installer}"
+
+grep -q 'image: hamster-switch/sub2api:hamster-v1.2.3' "${hamster_target}/deploy/docker-compose.yml"
+grep -q 'image: postgres:18-alpine' "${hamster_target}/deploy/docker-compose.yml"
+grep -q 'load' "${hamster_log}"
 
 rollback_target="${test_root}/rollback"
 rollback_log="${test_root}/rollback-docker.log"

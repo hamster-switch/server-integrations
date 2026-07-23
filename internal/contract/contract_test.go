@@ -59,6 +59,40 @@ func TestManifestRejectsArbitraryBuildStep(t *testing.T) {
 	}
 }
 
+func TestManifestReleaseChannels(t *testing.T) {
+	legacy := validManifest()
+	if got := legacy.ExpectedReleaseTag(); got != "sub2api-v1.0.0" {
+		t.Fatalf("legacy release tag = %q", got)
+	}
+	if err := legacy.Validate(); err != nil {
+		t.Fatalf("legacy manifest rejected: %v", err)
+	}
+
+	hamster := validManifest()
+	hamster.Channel = "hamster"
+	hamster.ReleaseID = "sub2api-hamster-v1.0.0"
+	if got := hamster.ExpectedReleaseTag(); got != hamster.ReleaseID {
+		t.Fatalf("hamster release tag = %q", got)
+	}
+	if err := hamster.Validate(); err != nil {
+		t.Fatalf("hamster manifest rejected: %v", err)
+	}
+}
+
+func TestManifestRejectsInvalidChannelAndReleaseID(t *testing.T) {
+	manifest := validManifest()
+	manifest.Channel = "preview"
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "unsupported release channel") {
+		t.Fatalf("expected channel rejection, got %v", err)
+	}
+
+	manifest = validManifest()
+	manifest.Channel = "hamster"
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "release_id must be") {
+		t.Fatalf("expected release_id rejection, got %v", err)
+	}
+}
+
 func TestManifestAcceptsExplicitCreateAndRejectsCreateHash(t *testing.T) {
 	manifest := validManifest()
 	manifest.Upstream.Files = append(manifest.Upstream.Files, FileFingerprint{Path: "backend/new.go", Absent: true})

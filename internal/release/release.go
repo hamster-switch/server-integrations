@@ -112,12 +112,8 @@ func (c Client) verifyPublished(ctx context.Context, published githubRelease, co
 	if err != nil {
 		return Verified{}, err
 	}
-	if manifest.Component != component {
-		return Verified{}, fmt.Errorf("signed manifest component is %s, expected %s", manifest.Component, component)
-	}
-	expectedTag := component + "-v" + manifest.PatchVersion
-	if published.TagName != expectedTag || manifest.ReleaseID != expectedTag {
-		return Verified{}, fmt.Errorf("release tag, release_id and patch_version are not bound to the same component version")
+	if err := verifyReleaseIdentity(published.TagName, manifest, component); err != nil {
+		return Verified{}, err
 	}
 	for _, declared := range manifest.Assets {
 		if _, ok := assets[declared.Name]; !ok {
@@ -125,6 +121,17 @@ func (c Client) verifyPublished(ctx context.Context, published githubRelease, co
 		}
 	}
 	return Verified{Tag: published.TagName, Manifest: manifest, Assets: assets}, nil
+}
+
+func verifyReleaseIdentity(publishedTag string, manifest contract.Manifest, component string) error {
+	if manifest.Component != component {
+		return fmt.Errorf("signed manifest component is %s, expected %s", manifest.Component, component)
+	}
+	expectedTag := manifest.ExpectedReleaseTag()
+	if publishedTag != expectedTag || manifest.ReleaseID != expectedTag {
+		return fmt.Errorf("release tag, release_id, channel and patch_version are not bound to the same component version")
+	}
+	return nil
 }
 
 func CheckMinimumCLI(current, required string) error {

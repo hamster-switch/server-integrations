@@ -8,6 +8,12 @@ on:
         required: true
         type: choice
         options: [sub2api, new-api]
+      channel:
+        description: Release channel
+        required: true
+        default: default
+        type: choice
+        options: [default, hamster]
       version:
         description: Patch version without v prefix
         required: true
@@ -29,35 +35,67 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go test ./...
+      - name: Resolve release channel
+        env:
+          COMPONENT: ${{ inputs.component }}
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -eu
+          case "$CHANNEL" in
+            default)
+              RELEASE_DIR="releases/${COMPONENT}/${VERSION}"
+              RELEASE_TAG="${COMPONENT}-v${VERSION}"
+              EXPECTED_CHANNEL=""
+              ;;
+            hamster)
+              RELEASE_DIR="releases/${COMPONENT}/${CHANNEL}/${VERSION}"
+              RELEASE_TAG="${COMPONENT}-${CHANNEL}-v${VERSION}"
+              EXPECTED_CHANNEL="$CHANNEL"
+              ;;
+            *)
+              echo "Unsupported release channel: $CHANNEL" >&2
+              exit 1
+              ;;
+          esac
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+          test -f "${RELEASE_DIR}/manifest.template.json"
+          test -d "${RELEASE_DIR}/assets"
+          python3 - "$RELEASE_DIR/manifest.template.json" "$EXPECTED_CHANNEL" "$RELEASE_TAG" <<'PY'
+          import json
+          import sys
+
+          path, expected_channel, expected_tag = sys.argv[1:]
+          with open(path, encoding="utf-8") as source:
+              manifest = json.load(source)
+          if manifest.get("channel", "") != expected_channel:
+              raise SystemExit("manifest channel does not match workflow input")
+          if manifest.get("release_id") != expected_tag:
+              raise SystemExit("manifest release_id does not match resolved tag")
+          PY
+          echo "RELEASE_DIR=${RELEASE_DIR}" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> "$GITHUB_ENV"
       - name: Build and sign exact release manifest
         env:
           HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY: ${{ secrets.HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY }}
-          COMPONENT: ${{ inputs.component }}
-          VERSION: ${{ inputs.version }}
         run: |
           test -n "$HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY"
-          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
-          test -f "releases/${COMPONENT}/${VERSION}/manifest.template.json"
-          test -d "releases/${COMPONENT}/${VERSION}/assets"
           mkdir -p dist/release
           go run ./cmd/release-builder \
-            --manifest "releases/${COMPONENT}/${VERSION}/manifest.template.json" \
-            --assets "releases/${COMPONENT}/${VERSION}/assets" \
+            --manifest "${RELEASE_DIR}/manifest.template.json" \
+            --assets "${RELEASE_DIR}/assets" \
             --output dist/release
-          cp "releases/${COMPONENT}/${VERSION}/assets/"* dist/release/
+          cp "${RELEASE_DIR}/assets/"* dist/release/
       - name: Publish immutable formal Release
         env:
           GH_TOKEN: ${{ github.token }}
-          COMPONENT: ${{ inputs.component }}
-          VERSION: ${{ inputs.version }}
         run: |
-          TAG="${COMPONENT}-v${VERSION}"
-          git rev-parse "$TAG" >/dev/null 2>&1 || {
-            echo "An annotated, pushed tag $TAG is required" >&2
+          git rev-parse "$RELEASE_TAG" >/dev/null 2>&1 || {
+            echo "An annotated, pushed tag $RELEASE_TAG is required" >&2
             exit 1
           }
-          gh release create "$TAG" dist/release/* \
+          gh release create "$RELEASE_TAG" dist/release/* \
             --repo "$GITHUB_REPOSITORY" \
-            --title "$TAG" \
+            --title "$RELEASE_TAG" \
             --generate-notes \
             --verify-tag
