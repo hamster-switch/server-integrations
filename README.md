@@ -42,9 +42,9 @@ hamster-integrations check sub2api --target /srv/sub2api
 hamster-integrations update sub2api --target /srv/sub2api --mode manual
 hamster-integrations update sub2api --target /srv/sub2api --mode manual --release sub2api-hamster-v1.0.2
 hamster-integrations rollback sub2api --target /srv/sub2api
-hamster-integrations inspect new-api --target /srv/new-api --release new-api-hamster-v1.0.1
-hamster-integrations check new-api --target /srv/new-api --release new-api-hamster-v1.0.1
-hamster-integrations update new-api --target /srv/new-api --mode manual --release new-api-hamster-v1.0.1
+hamster-integrations inspect new-api --target /srv/new-api --release new-api-hamster-v1.0.2
+hamster-integrations check new-api --target /srv/new-api --release new-api-hamster-v1.0.2
+hamster-integrations update new-api --target /srv/new-api --mode manual --release new-api-hamster-v1.0.2
 ```
 
 `check` never applies a patch. `update` prints the exact affected files and
@@ -71,10 +71,10 @@ The following command installs `sub2api-hamster` v1.0.2:
 tmp=$(mktemp -d) && cd "$tmp" && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-hamster-v1.0.2/install-sub2api-hamster-v1.0.2.sh && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-sub2api-hamster-v1.0.2/SHA256SUMS && sha256sum -c SHA256SUMS --ignore-missing && sudo bash install-sub2api-hamster-v1.0.2.sh
 ```
 
-The corresponding New API Hamster v1.0.1 command is:
+The corresponding New API Hamster v1.0.2 command is:
 
 ```bash
-tmp=$(mktemp -d) && cd "$tmp" && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-new-api-hamster-v1.0.1/install-new-api-hamster-v1.0.1.sh && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-new-api-hamster-v1.0.1/SHA256SUMS && sha256sum -c SHA256SUMS --ignore-missing && sudo bash install-new-api-hamster-v1.0.1.sh
+tmp=$(mktemp -d) && cd "$tmp" && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-new-api-hamster-v1.0.2/install-new-api-hamster-v1.0.2.sh && curl -fsSLO https://github.com/hamster-switch/server-integrations/releases/download/image-new-api-hamster-v1.0.2/SHA256SUMS && sha256sum -c SHA256SUMS --ignore-missing && sudo bash install-new-api-hamster-v1.0.2.sh
 ```
 
 ### systemd deployments
@@ -94,7 +94,7 @@ For a custom unit, binary path, or health endpoint:
 
 ```bash
 sudo bash install-sub2api-hamster-v1.0.2.sh --mode systemd --systemd-service custom-sub2api.service --binary /opt/sub2api/sub2api --health-url http://127.0.0.1:8080/health
-sudo bash install-new-api-hamster-v1.0.1.sh --mode systemd --systemd-service custom-new-api.service --binary /opt/new-api/new-api --health-url http://127.0.0.1:3000/api/status
+sudo bash install-new-api-hamster-v1.0.2.sh --mode systemd --systemd-service custom-new-api.service --binary /opt/new-api/new-api --health-url http://127.0.0.1:3000/api/status
 ```
 
 The systemd binary currently supports Linux x86_64 (`amd64`).
@@ -129,7 +129,7 @@ and service name:
 
 ```bash
 sudo bash install-sub2api-hamster-v1.0.2.sh --mode compose --compose-file /absolute/path/to/docker-compose.yml --service sub2api
-sudo bash install-new-api-hamster-v1.0.1.sh --mode compose --compose-file /absolute/path/to/docker-compose.yml --service new-api
+sudo bash install-new-api-hamster-v1.0.2.sh --mode compose --compose-file /absolute/path/to/docker-compose.yml --service new-api
 ```
 
 For a relative `config_files` label, resolve it below the reported

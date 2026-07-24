@@ -9,24 +9,25 @@
 
 ## New API Hamster 通道
 
-当前推荐版本 `new-api-hamster-v1.0.1` 固定在
+当前推荐版本 `new-api-hamster-v1.0.2` 固定在
 `QuantumNous/new-api@1721144221ec5c94dd87891a7ae1bee228e7bb63`，候选 manifest
 和确定性补丁位于
-[`releases/new-api/hamster/1.0.1/`](../../../releases/new-api/hamster/1.0.1/)。
+[`releases/new-api/hamster/1.0.2/`](../../../releases/new-api/hamster/1.0.2/)。
 该通道不迁移旧 `new-api-v1.0.0`、`5a6c53d` 表结构或 `hs_` URL。
 
 正式发布使用两个不可变标签：源码补丁
-`new-api-hamster-v1.0.1`，预构建资产
-`image-new-api-hamster-v1.0.1`。预构建版本只支持 Linux amd64，包含
-`hamster-switch/new-api:hamster-v1.0.1` 镜像、嵌入前端的 systemd 二进制、
+`new-api-hamster-v1.0.2`，预构建资产
+`image-new-api-hamster-v1.0.2`。预构建版本只支持 Linux amd64，包含
+`hamster-switch/new-api:hamster-v1.0.2` 镜像、嵌入前端的 systemd 二进制、
 版本绑定安装器和 `SHA256SUMS`。Compose 与 systemd 均检查 `/api/status`，失败
 自动恢复原镜像或二进制；服务器不执行 Bun、Go 或 Docker build。
 
 安装、显式 Compose 参数、备份恢复和故障排查命令以仓库根目录
 [`README.md`](../../../README.md) 为准。
 
-`new-api-hamster-v1.0.0` 的源码资产保持不可变，但其 `Dockerfile` 上游
-指纹由 Windows CRLF 工作树生成，不能用于 Linux 预构建；请勿安装该版本。
+`new-api-hamster-v1.0.0` 和 `v1.0.1` 的源码资产保持不可变，但其
+`Dockerfile` 上游指纹由 Windows CRLF 工作树生成，不能用于 Linux
+预构建；请勿安装这两个版本。
 
 ## 维护边界
 

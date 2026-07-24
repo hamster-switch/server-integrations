@@ -11,6 +11,7 @@
 - 本会话内置浏览器不可用，真实桌面/移动端、亮/暗主题视觉检查仍未完成；临时检查容器已停止并删除。
 - 正式标签、签名 GitHub Releases 和公开资产重下载验证仍受发布授权与签名凭证边界阻塞，不得以本地候选替代。
 - `new-api-hamster-v1.0.0` 已发布但因 Windows CRLF `Dockerfile` 上游指纹无法应用于 Linux checkout，保持资产不可变并由 `1.0.1` 修正；不得覆盖或删除已发布资产。
+- `1.0.1` 的校验错误使用了会应用 clean filter 的默认 `git hash-object`，仍未发现工作树 CRLF；最终修正版为使用 `--no-filters` 校验的 `1.0.2`。
 
 ## 0. 基线与工作区
 
@@ -163,7 +164,7 @@ bun run build
 ## 11. Linux amd64 预构建与安装器
 
 - [x] 扩展预构建工作流，为 New API 构建嵌入前端的 Linux amd64 二进制和 amd64 镜像。
-- [ ] 生成 `image-new-api-hamster-v1.0.1` Release、版本绑定安装器和 `SHA256SUMS`。
+- [ ] 生成 `image-new-api-hamster-v1.0.2` Release、版本绑定安装器和 `SHA256SUMS`。
 - [x] Compose 自动检测支持标准/自定义镜像和重命名服务；歧义拒绝并支持显式 `--compose-file`、`--service`。
 - [x] systemd 从实际 `ExecStart` 解析二进制，保留 owner/mode，原子替换且不改 unit/env。
 - [x] 两种模式都备份、等待 `/api/status`、失败恢复；部署命令禁止服务器端 build。
@@ -177,7 +178,7 @@ bun run build
 - [x] 提供默认一条命令安装，以及无法自动识别时带绝对 Compose 文件和服务名的完整命令。
 - [x] 说明升级、回滚、健康检查、备份位置、常见错误和如何确认实际运行镜像/二进制版本。
 - [ ] 在发布前从 README 原样执行安装命令完成全新 Compose、现有 Compose 和 systemd 演练。
-- [ ] 创建修正版 `new-api-hamster-v1.0.1`，等待签名补丁资产完成；再创建 `image-new-api-hamster-v1.0.1`。
+- [ ] 创建修正版 `new-api-hamster-v1.0.2`，等待签名补丁资产完成；再创建 `image-new-api-hamster-v1.0.2`。
 - [ ] 从公开 Release 重新下载全部资产，复验 SHA-256、签名、安装、健康检查和回滚。
 - [x] 不覆盖任何已发布资产；修正必须发布新 patch 版本。
 
