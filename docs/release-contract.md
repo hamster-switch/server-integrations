@@ -83,8 +83,10 @@ in a Release asset.
   deployment target. It verifies the archive, loads the exact
   `hamster-switch/<component>:hs-v<version>` default-channel image or
   `hamster-switch/<component>:<channel>-v<version>` channel image, rewrites
-  exactly one Compose service image, uses `--no-build`, waits for container
-  health, and restores its Compose backup if deployment fails.
+  exactly one Compose service image, uses `--no-build`, waits for component
+  health, and restores its Compose backup if deployment fails. New API uses an
+  in-container HTTP probe of `/api/status` when the image has no Docker
+  healthcheck; a merely running container is not sufficient.
 - Automatic detection may match the component's Compose service, exact
   container name, or a custom image name containing the component. Once a
   container is selected, the verified image is applied to the exact Compose
@@ -95,6 +97,9 @@ in a Release asset.
   `ExecStart`, preserves owner and mode, keeps a timestamped backup, atomically
   replaces the binary, checks service state and HTTP health, and restores the
   previous binary on failure. It never rewrites the unit or environment file.
+  Sub2api defaults to `SERVER_PORT`, port `8080`, and `/health`; New API defaults
+  to `PORT`, port `3000`, and `/api/status`. Absolute `ExecStart` paths may
+  contain spaces.
 - A prebuilt systemd binary is compatible only with the upstream source and
   immutable migration history pinned by its signed source Release. Forks that
   changed an applied migration require a fork-built binary; installers and
