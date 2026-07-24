@@ -9,7 +9,7 @@ Historical examples exist under `releases/sub2api/1.0.0` through `1.0.8` and `re
 ## Deterministic build and signing
 
 - `cmd/patch-bundle-builder/main.go` must build from a pristine upstream tree plus a fully patched result tree. It sorts bundle entries and zeroes tar/gzip timestamps.
-- Before fingerprinting a Git-backed pristine tree, require `git hash-object -- <path>` to equal `git rev-parse HEAD:<path>` for every tracked patch source. Use `core.autocrlf=false` for the release checkout; transformed CRLF worktree bytes are not canonical upstream bytes.
+- Before fingerprinting a Git-backed pristine tree, require `git hash-object --no-filters -- <path>` to equal `git rev-parse HEAD:<path>` for every tracked patch source. Use `core.autocrlf=false` and `core.eol=lf` for the release checkout; transformed CRLF worktree bytes are not canonical upstream bytes. The default `git hash-object` applies clean filters and can hide this mismatch.
 - `cmd/release-builder/main.go` recomputes asset hashes, verifies the bundle, validates the full manifest, writes indented UTF-8 JSON followed by one LF, and signs those exact bytes.
 - `HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY` is CI-only secret material. Never write it to source, task notes, logs, fixtures, or Release assets.
 - The signing key must match `release.PublicKeyBase64`; key rotation requires a reviewed CLI release, not a patch manifest edit.
