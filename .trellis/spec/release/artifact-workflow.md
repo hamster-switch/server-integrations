@@ -9,6 +9,7 @@ Historical examples exist under `releases/sub2api/1.0.0` through `1.0.8` and `re
 ## Deterministic build and signing
 
 - `cmd/patch-bundle-builder/main.go` must build from a pristine upstream tree plus a fully patched result tree. It sorts bundle entries and zeroes tar/gzip timestamps.
+- Before fingerprinting a Git-backed pristine tree, require `git hash-object -- <path>` to equal `git rev-parse HEAD:<path>` for every tracked patch source. Use `core.autocrlf=false` for the release checkout; transformed CRLF worktree bytes are not canonical upstream bytes.
 - `cmd/release-builder/main.go` recomputes asset hashes, verifies the bundle, validates the full manifest, writes indented UTF-8 JSON followed by one LF, and signs those exact bytes.
 - `HAMSTER_INTEGRATIONS_ED25519_PRIVATE_KEY` is CI-only secret material. Never write it to source, task notes, logs, fixtures, or Release assets.
 - The signing key must match `release.PublicKeyBase64`; key rotation requires a reviewed CLI release, not a patch manifest edit.
@@ -35,6 +36,7 @@ Historical examples exist under `releases/sub2api/1.0.0` through `1.0.8` and `re
 ### 4. Validation & Error Matrix
 
 - Lockfile drift or dependency integrity failure -> Docker build fails; do not retry with an unfrozen install.
+- A pristine tracked file whose worktree hash differs from its Git object hash -> reject the candidate before signing; rebuild from a non-transforming checkout.
 - Image architecture other than `linux/amd64` -> reject the candidate.
 - Missing or non-x86-64 `/new-api` -> reject the candidate.
 - `/api/status` timeout, non-200 response, or non-JSON body -> reject the candidate and remove the temporary container.
