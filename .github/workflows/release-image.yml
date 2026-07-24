@@ -61,12 +61,37 @@ jobs:
               exit 1
               ;;
           esac
+          case "$COMPONENT" in
+            sub2api)
+              CONTAINER_BINARY="/app/sub2api"
+              DEFAULT_PORT="8080"
+              PORT_ENV_NAME="SERVER_PORT"
+              HEALTH_PATH="/health"
+              REQUIRE_HTTP_HEALTH="0"
+              ;;
+            new-api)
+              CONTAINER_BINARY="/new-api"
+              DEFAULT_PORT="3000"
+              PORT_ENV_NAME="PORT"
+              HEALTH_PATH="/api/status"
+              REQUIRE_HTTP_HEALTH="1"
+              ;;
+            *)
+              echo "Unsupported component: $COMPONENT" >&2
+              exit 1
+              ;;
+          esac
           test -f "${RELEASE_DIR}/manifest.template.json"
           echo "RELEASE_DIR=${RELEASE_DIR}" >> "$GITHUB_ENV"
           echo "RELEASE_NAME=${RELEASE_NAME}" >> "$GITHUB_ENV"
           echo "SOURCE_TAG=${SOURCE_TAG}" >> "$GITHUB_ENV"
           echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
           echo "INSTALLER_CHANNEL=${INSTALLER_CHANNEL}" >> "$GITHUB_ENV"
+          echo "CONTAINER_BINARY=${CONTAINER_BINARY}" >> "$GITHUB_ENV"
+          echo "DEFAULT_PORT=${DEFAULT_PORT}" >> "$GITHUB_ENV"
+          echo "PORT_ENV_NAME=${PORT_ENV_NAME}" >> "$GITHUB_ENV"
+          echo "HEALTH_PATH=${HEALTH_PATH}" >> "$GITHUB_ENV"
+          echo "REQUIRE_HTTP_HEALTH=${REQUIRE_HTTP_HEALTH}" >> "$GITHUB_ENV"
       - name: Clone upstream at pinned commit and apply signed patch
         env:
           HAMSTER_INTEGRATIONS_STATE_DIR: /tmp/hamster-int-state
@@ -92,21 +117,27 @@ jobs:
           ASSET="${RELEASE_NAME}-image-v${VERSION}.tar.gz"
           BINARY_ASSET="${RELEASE_NAME}-linux-amd64-v${VERSION}.gz"
           INSTALLER="install-${RELEASE_NAME}-v${VERSION}.sh"
-          docker build \
+          docker build --platform linux/amd64 \
+            --build-arg BUN_REGISTRY=https://registry.npmjs.org \
             --build-arg GOPROXY=https://proxy.golang.org,direct \
             --build-arg GOSUMDB=sum.golang.org \
             -t "$IMAGE" /tmp/upstream
           docker save "$IMAGE" | gzip > "/tmp/${ASSET}"
-          CONTAINER_ID="$(docker create "$IMAGE")"
+          CONTAINER_ID="$(docker create --platform linux/amd64 "$IMAGE")"
           trap 'docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true' EXIT
-          docker cp "${CONTAINER_ID}:/app/sub2api" /tmp/sub2api-linux-amd64
+          docker cp "${CONTAINER_ID}:${CONTAINER_BINARY}" "/tmp/${COMPONENT}-linux-amd64"
           docker rm "$CONTAINER_ID" >/dev/null
           trap - EXIT
-          gzip -n -9 -c /tmp/sub2api-linux-amd64 > "/tmp/${BINARY_ASSET}"
+          file "/tmp/${COMPONENT}-linux-amd64" | grep -Eq 'ELF 64-bit.*x86-64'
+          gzip -n -9 -c "/tmp/${COMPONENT}-linux-amd64" > "/tmp/${BINARY_ASSET}"
           sed \
             -e "s/__COMPONENT__/${COMPONENT}/g" \
             -e "s/__CHANNEL__/${INSTALLER_CHANNEL}/g" \
             -e "s/__VERSION__/${VERSION}/g" \
+            -e "s/__DEFAULT_PORT__/${DEFAULT_PORT}/g" \
+            -e "s/__PORT_ENV_NAME__/${PORT_ENV_NAME}/g" \
+            -e "s#__HEALTH_PATH__#${HEALTH_PATH}#g" \
+            -e "s/__REQUIRE_HTTP_HEALTH__/${REQUIRE_HTTP_HEALTH}/g" \
             scripts/install-prebuilt-image.sh > "/tmp/${INSTALLER}"
           chmod 0755 "/tmp/${INSTALLER}"
           (
