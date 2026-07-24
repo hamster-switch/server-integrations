@@ -6,6 +6,10 @@ readonly REPOSITORY="hamster-switch/server-integrations"
 readonly COMPONENT="__COMPONENT__"
 readonly CHANNEL="__CHANNEL__"
 readonly VERSION="__VERSION__"
+readonly DEFAULT_PORT="__DEFAULT_PORT__"
+readonly PORT_ENV_NAME="__PORT_ENV_NAME__"
+readonly HEALTH_PATH="__HEALTH_PATH__"
+readonly REQUIRE_HTTP_HEALTH="__REQUIRE_HTTP_HEALTH__"
 if [[ -n "${CHANNEL}" ]]; then
   readonly RELEASE_NAME="${COMPONENT}-${CHANNEL}"
   readonly IMAGE_TAG="${CHANNEL}-v${VERSION}"
@@ -53,7 +57,7 @@ Systemd asset: ${BINARY_ASSET}
 Systemd options:
   --systemd-service NAME   Service unit (default: ${COMPONENT}.service)
   --binary ABSOLUTE_PATH  Existing binary to replace (default: ExecStart path)
-  --health-url URL         Health endpoint (default: SERVER_PORT or port 8080)
+  --health-url URL         Health endpoint (default: ${PORT_ENV_NAME} or port ${DEFAULT_PORT}, path ${HEALTH_PATH})
 
 Compose options:
   --target ABSOLUTE_PATH
@@ -185,7 +189,8 @@ install_systemd() {
     exec_start="$(systemctl show "${SYSTEMD_SERVICE}" --property=ExecStart --value)"
     if [[ "${exec_start}" == *"path="* ]]; then
       path_part="${exec_start#*path=}"
-      BINARY_PATH="${path_part%%[ ;]*}"
+      BINARY_PATH="${path_part%%; argv*}"
+      BINARY_PATH="${BINARY_PATH% }"
     fi
   fi
   [[ -n "${BINARY_PATH}" ]] || fail "could not read an absolute binary path from ${SYSTEMD_SERVICE} ExecStart; use --binary"
@@ -193,13 +198,13 @@ install_systemd() {
   [[ -f "${BINARY_PATH}" && ! -L "${BINARY_PATH}" ]] || fail "systemd binary must be an existing regular file, not a symlink: ${BINARY_PATH}"
 
   if [[ -z "${HEALTH_URL}" ]]; then
-    local server_port="8080"
+    local server_port="${DEFAULT_PORT}"
     local environment_files environment_file candidate_port
     environment_files="$(systemctl show "${SYSTEMD_SERVICE}" --property=EnvironmentFiles --value 2>/dev/null || true)"
     for environment_file in ${environment_files}; do
       [[ "${environment_file}" == /* ]] || continue
       [[ -f "${environment_file}" ]] || continue
-      candidate_port="$(awk -F= '$1 == "SERVER_PORT" {
+      candidate_port="$(awk -F= -v port_name="${PORT_ENV_NAME}" '$1 == port_name {
         value=$0
         sub(/^[^=]*=/, "", value)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
@@ -216,7 +221,7 @@ install_systemd() {
         server_port="${candidate_port}"
       fi
     done
-    HEALTH_URL="http://127.0.0.1:${server_port}/health"
+    HEALTH_URL="http://127.0.0.1:${server_port}${HEALTH_PATH}"
   fi
 
   TEMP_DIR="$(mktemp -d)"
@@ -519,9 +524,17 @@ fi
 
 for _ in {1..60}; do
   health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container_id}" 2>/dev/null || true)"
-  if [[ "${health_status}" == "healthy" || "${health_status}" == "running" ]]; then
+  if [[ "${health_status}" == "healthy" ]]; then
     echo "Installed ${IMAGE}; container status: ${health_status}"
     exit 0
+  fi
+  if [[ "${health_status}" == "running" ]]; then
+    if [[ "${REQUIRE_HTTP_HEALTH}" == "0" ]] || docker exec "${container_id}" sh -c \
+      'command -v wget >/dev/null 2>&1 && wget -q -T 5 -O /dev/null "$1"' \
+      sh "http://127.0.0.1:${DEFAULT_PORT}${HEALTH_PATH}"; then
+      echo "Installed ${IMAGE}; container status: ${health_status}; HTTP health passed."
+      exit 0
+    fi
   fi
   if [[ "${health_status}" == "unhealthy" || "${health_status}" == "exited" || "${health_status}" == "dead" ]]; then
     break

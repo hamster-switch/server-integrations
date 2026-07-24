@@ -16,6 +16,10 @@ sed \
   -e 's/__COMPONENT__/sub2api/g' \
   -e 's/__CHANNEL__//g' \
   -e 's/__VERSION__/1.2.3/g' \
+  -e 's/__DEFAULT_PORT__/8080/g' \
+  -e 's/__PORT_ENV_NAME__/SERVER_PORT/g' \
+  -e 's#__HEALTH_PATH__#/health#g' \
+  -e 's/__REQUIRE_HTTP_HEALTH__/0/g' \
   "${repo_root}/scripts/install-prebuilt-image.sh" >"${installer}"
 chmod 0755 "${installer}"
 bash -n "${installer}"
@@ -25,11 +29,34 @@ sed \
   -e 's/__COMPONENT__/sub2api/g' \
   -e 's/__CHANNEL__/hamster/g' \
   -e 's/__VERSION__/1.2.3/g' \
+  -e 's/__DEFAULT_PORT__/8080/g' \
+  -e 's/__PORT_ENV_NAME__/SERVER_PORT/g' \
+  -e 's#__HEALTH_PATH__#/health#g' \
+  -e 's/__REQUIRE_HTTP_HEALTH__/0/g' \
   "${repo_root}/scripts/install-prebuilt-image.sh" >"${hamster_installer}"
 bash -n "${hamster_installer}"
 bash "${hamster_installer}" --help | grep -q 'hamster-switch/sub2api:hamster-v1.2.3'
 if grep -q '__CHANNEL__' "${hamster_installer}"; then
   echo 'channel placeholder was not replaced' >&2
+  exit 1
+fi
+
+new_api_installer="${test_root}/install-new-api-hamster-v1.2.3.sh"
+sed \
+  -e 's/__COMPONENT__/new-api/g' \
+  -e 's/__CHANNEL__/hamster/g' \
+  -e 's/__VERSION__/1.2.3/g' \
+  -e 's/__DEFAULT_PORT__/3000/g' \
+  -e 's/__PORT_ENV_NAME__/PORT/g' \
+  -e 's#__HEALTH_PATH__#/api/status#g' \
+  -e 's/__REQUIRE_HTTP_HEALTH__/1/g' \
+  "${repo_root}/scripts/install-prebuilt-image.sh" >"${new_api_installer}"
+chmod 0755 "${new_api_installer}"
+bash -n "${new_api_installer}"
+bash "${new_api_installer}" --help | grep -q 'hamster-switch/new-api:hamster-v1.2.3'
+bash "${new_api_installer}" --help | grep -q 'PORT or port 3000, path /api/status'
+if grep -Eq '__[A-Z_]+__' "${new_api_installer}"; then
+  echo 'new-api installer contains an unreplaced placeholder' >&2
   exit 1
 fi
 
@@ -40,13 +67,17 @@ printf 'fake docker image archive\n' | gzip >"${fixture_root}/sub2api-image-v1.2
 printf 'fake hamster channel image archive\n' | gzip >"${fixture_root}/sub2api-hamster-image-v1.2.3.tar.gz"
 printf 'patched systemd binary\n' | gzip >"${fixture_root}/sub2api-linux-amd64-v1.2.3.gz"
 printf 'patched hamster systemd binary\n' | gzip >"${fixture_root}/sub2api-hamster-linux-amd64-v1.2.3.gz"
+printf 'fake new-api hamster image archive\n' | gzip >"${fixture_root}/new-api-hamster-image-v1.2.3.tar.gz"
+printf 'patched new-api systemd binary\n' | gzip >"${fixture_root}/new-api-hamster-linux-amd64-v1.2.3.gz"
 (
   cd "${fixture_root}"
   sha256sum \
     sub2api-image-v1.2.3.tar.gz \
     sub2api-hamster-image-v1.2.3.tar.gz \
     sub2api-linux-amd64-v1.2.3.gz \
-    sub2api-hamster-linux-amd64-v1.2.3.gz >SHA256SUMS
+    sub2api-hamster-linux-amd64-v1.2.3.gz \
+    new-api-hamster-image-v1.2.3.tar.gz \
+    new-api-hamster-linux-amd64-v1.2.3.gz >SHA256SUMS
 )
 
 cat >"${fake_bin}/id" <<'EOF'
@@ -102,7 +133,7 @@ EOF
 cat >"${fake_bin}/uname" <<'EOF'
 #!/usr/bin/env bash
 if [[ "${1:-}" == "-m" ]]; then
-  echo x86_64
+  echo "${MOCK_UNAME:-x86_64}"
   exit 0
 fi
 exec /usr/bin/uname "$@"
@@ -226,6 +257,42 @@ grep -q 'http://127.0.0.1:8181/health' "${systemd_success_curl_log}"
 compgen -G "${systemd_success}/sub2api.hamster-switch.*.bak" >/dev/null
 [[ "$(cat "${systemd_success_state}")" == active ]]
 
+new_api_systemd="${test_root}/new api systemd success"
+new_api_systemd_log="${test_root}/new-api-systemd-success.log"
+new_api_systemd_curl_log="${test_root}/new-api-systemd-success-curl.log"
+new_api_systemd_state="${test_root}/new-api-systemd-success.state"
+new_api_systemd_env="${test_root}/new-api-systemd.env"
+mkdir -p "${new_api_systemd}"
+printf 'previous new-api binary\n' >"${new_api_systemd}/new-api"
+chmod 0755 "${new_api_systemd}/new-api"
+printf 'PORT=3300\n' >"${new_api_systemd_env}"
+echo active >"${new_api_systemd_state}"
+FIXTURE_ROOT="${fixture_root}" MOCK_SYSTEMD_LOADED=1 \
+  MOCK_BINARY_PATH="${new_api_systemd}/new-api" \
+  MOCK_ENV_FILE="${new_api_systemd_env} (ignore_errors=no)" \
+  SYSTEMD_LOG="${new_api_systemd_log}" SYSTEMD_STATE_FILE="${new_api_systemd_state}" \
+  CURL_LOG="${new_api_systemd_curl_log}" MOCK_HTTP_STATUS=200 \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${new_api_installer}"
+
+grep -q 'patched new-api systemd binary' "${new_api_systemd}/new-api"
+grep -q 'stop new-api.service' "${new_api_systemd_log}"
+grep -q 'start new-api.service' "${new_api_systemd_log}"
+grep -q 'http://127.0.0.1:3300/api/status' "${new_api_systemd_curl_log}"
+compgen -G "${new_api_systemd}/new-api.hamster-switch.*.bak" >/dev/null
+
+new_api_wrong_arch="${test_root}/new-api-wrong-arch"
+mkdir -p "${new_api_wrong_arch}"
+printf 'previous new-api binary\n' >"${new_api_wrong_arch}/new-api"
+chmod 0755 "${new_api_wrong_arch}/new-api"
+if FIXTURE_ROOT="${fixture_root}" MOCK_UNAME=aarch64 \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${new_api_installer}" --mode systemd --binary "${new_api_wrong_arch}/new-api"; then
+  echo 'expected non-x86_64 new-api installation to fail' >&2
+  exit 1
+fi
+grep -q 'previous new-api binary' "${new_api_wrong_arch}/new-api"
+
 systemd_rollback="${test_root}/systemd-rollback"
 systemd_rollback_log="${test_root}/systemd-rollback.log"
 systemd_rollback_state="${test_root}/systemd-rollback.state"
@@ -287,6 +354,20 @@ grep -q 'image: hamster-switch/sub2api:hamster-v1.2.3' "${hamster_target}/deploy
 grep -q 'image: postgres:18-alpine' "${hamster_target}/deploy/docker-compose.yml"
 grep -q 'load' "${hamster_log}"
 
+new_api_target="${test_root}/new-api compose success"
+new_api_log="${test_root}/new-api-success-docker.log"
+write_compose "${new_api_target}" api 'private/new-api-themed:latest'
+FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${new_api_log}" MOCK_HEALTH=running \
+  MOCK_COMPOSE_TARGET="${new_api_target}" MOCK_SERVICE=api \
+  MOCK_IMAGE='private/new-api-themed:latest' MOCK_CONTAINER_NAME='custom-new-api' \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${new_api_installer}"
+
+grep -q 'image: hamster-switch/new-api:hamster-v1.2.3' "${new_api_target}/deploy/docker-compose.yml"
+grep -q 'image: postgres:18-alpine' "${new_api_target}/deploy/docker-compose.yml"
+grep -q 'up -d --no-build api' "${new_api_log}"
+grep -q 'exec fake-container-id sh -c' "${new_api_log}"
+
 themed_target="${test_root}/themed-success"
 themed_log="${test_root}/themed-success-docker.log"
 write_compose "${themed_target}" backend 'private/sub2api-themed:latest'
@@ -337,6 +418,25 @@ fi
 
 grep -q 'image: hamster-switch/sub2api:hs-v1.0.0' "${rollback_target}/deploy/docker-compose.yml"
 [[ "$(grep -c 'up -d --no-build sub2api' "${rollback_log}")" -eq 2 ]]
+
+bad_fixture_root="${test_root}/bad-release"
+cp -R "${fixture_root}" "${bad_fixture_root}"
+printf 'corrupt\n' >>"${bad_fixture_root}/new-api-hamster-image-v1.2.3.tar.gz"
+checksum_target="${test_root}/checksum-failure"
+checksum_log="${test_root}/checksum-failure-docker.log"
+write_compose "${checksum_target}" api 'private/new-api:latest'
+if FIXTURE_ROOT="${bad_fixture_root}" DOCKER_LOG="${checksum_log}" MOCK_HEALTH=healthy \
+  PATH="${fake_bin}:${PATH}" \
+  bash "${new_api_installer}" --mode compose \
+    --compose-file "${checksum_target}/deploy/docker-compose.yml" --service api; then
+  echo 'expected new-api image checksum verification to fail' >&2
+  exit 1
+fi
+grep -q 'image: private/new-api:latest' "${checksum_target}/deploy/docker-compose.yml"
+if grep -q '^load$' "${checksum_log}"; then
+  echo 'checksum failure must happen before docker load' >&2
+  exit 1
+fi
 
 ambiguous_log="${test_root}/ambiguous-docker.log"
 if FIXTURE_ROOT="${fixture_root}" DOCKER_LOG="${ambiguous_log}" MOCK_MULTIPLE_CONTAINERS=1 \
